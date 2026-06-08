@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # KYL Request Platform POC
 
 Web-based Application สำหรับจัดการรายการ Request ตามโจทย์ POC ชุดที่ 1 โดยใช้ React, TypeScript, Node.js, C# และ PostgreSQL
@@ -113,3 +114,6 @@ Payload สำหรับเพิ่ม/แก้ไข
 - `deleted_at` ใช้สำหรับ Soft Delete
 - มี index สำหรับรายการล่าสุด, ประเภท และการค้นหา
 
+=======
+# KYL-Poc1
+>>>>>>> a4d66ca59a650595f984990856f0961cbe0bf369
