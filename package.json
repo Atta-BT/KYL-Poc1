@@ -1,0 +1,20 @@
+{
+  "name": "kyl-poc-request-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Web-based Request Management POC with React, TypeScript, Node.js, C#, and PostgreSQL.",
+  "workspaces": [
+    "apps/web",
+    "services/api-node"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace apps/web",
+    "dev:api": "npm run dev --workspace services/api-node",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+
