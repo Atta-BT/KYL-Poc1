@@ -1,19 +1,16 @@
 import { Filter, RefreshCw, Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "../components/Button";
-import { EmptyState } from "../components/EmptyState";
-import { Pagination } from "../components/Pagination";
-import { RequestTable } from "../components/RequestTable";
-import { listRequests } from "../api/requests";
+import { Button, EmptyState, Pagination, RequestTable } from "../components";
+import { listRequests } from "../api";
 import {
   REQUEST_TYPES,
   type RequestType,
   type ServiceRequest
-} from "../types/request";
+} from "../types";
 
 const PAGE_SIZE = 10;
+const DEBOUNCE_MS = 400;
 
 export const RequestListPage = () => {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
@@ -21,10 +18,20 @@ export const RequestListPage = () => {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
-  const [draftSearch, setDraftSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [type, setType] = useState<RequestType | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const loadRequests = useCallback(async () => {
     setIsLoading(true);
@@ -34,7 +41,7 @@ export const RequestListPage = () => {
       const response = await listRequests({
         page,
         pageSize: PAGE_SIZE,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         type: type || undefined
       });
 
@@ -50,26 +57,11 @@ export const RequestListPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, search, type]);
+  }, [page, debouncedSearch, type]);
 
   useEffect(() => {
     void loadRequests();
   }, [loadRequests]);
-
-  const summary = useMemo(
-    () => [
-      { label: "ทั้งหมด", value: total.toLocaleString("th-TH") },
-      { label: "ต่อหน้า", value: PAGE_SIZE.toLocaleString("th-TH") },
-      { label: "หน้าปัจจุบัน", value: page.toLocaleString("th-TH") }
-    ],
-    [page, total]
-  );
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(draftSearch.trim());
-  };
 
   const handleTypeChange = (value: RequestType | "") => {
     setPage(1);
@@ -88,31 +80,17 @@ export const RequestListPage = () => {
         </Link>
       </div>
 
-      <div className="summary-grid">
-        {summary.map((item) => (
-          <div className="summary-item" key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
-      </div>
-
       <section className="panel">
         <div className="toolbar">
-          <form className="search-form" onSubmit={handleSearch}>
-            <label className="search-box">
-              <Search size={18} aria-hidden="true" />
-              <input
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder="ค้นหาเลขที่ หัวข้อ ชื่อ หรืออีเมล"
-                type="search"
-                value={draftSearch}
-              />
-            </label>
-            <Button icon={<Search size={18} />} type="submit" variant="primary">
-              ค้นหา
-            </Button>
-          </form>
+          <label className="search-box">
+            <Search size={18} aria-hidden="true" />
+            <input
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="ค้นหาเลขที่ หัวข้อ ชื่อ หรืออีเมล"
+              type="search"
+              value={search}
+            />
+          </label>
 
           <label className="filter-select">
             <Filter size={18} aria-hidden="true" />
@@ -150,6 +128,7 @@ export const RequestListPage = () => {
             <Pagination
               onPageChange={setPage}
               page={page}
+              total={total}
               totalPages={totalPages}
             />
           </>

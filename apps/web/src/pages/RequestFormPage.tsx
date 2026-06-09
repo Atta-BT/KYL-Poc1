@@ -1,6 +1,5 @@
 import {
   ArrowLeft,
-  CheckCircle2,
   Save,
   Trash2
 } from "lucide-react";
@@ -12,21 +11,19 @@ import {
   deleteRequest,
   getRequest,
   updateRequest
-} from "../api/requests";
-import { Button } from "../components/Button";
-import { ConfirmDialog } from "../components/ConfirmDialog";
-import { FormField } from "../components/FormField";
+} from "../api";
+import { Button, ConfirmDialog, FormField } from "../components";
 import {
   REQUEST_TYPES,
   type RequestPayload,
   type ServiceRequest
-} from "../types/request";
-import { formatDateTime } from "../utils/format";
+} from "../types";
 import {
+  formatDateTime,
   toApiPayload,
   validateRequestPayload,
   type FormErrors
-} from "../utils/validation";
+} from "../utils";
 
 const emptyPayload: RequestPayload = {
   title: "",
@@ -53,11 +50,11 @@ export const RequestFormPage = () => {
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [pageError, setPageError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(isEditing);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -102,10 +99,10 @@ export const RequestFormPage = () => {
         [field]: event.target.value
       }));
       setErrors((current) => ({ ...current, [field]: undefined }));
-      setSuccessMessage(null);
     };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  // Step 1: Validate → open confirm popup
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextErrors = validateRequestPayload(payload);
@@ -113,26 +110,29 @@ export const RequestFormPage = () => {
 
     if (Object.keys(nextErrors).length > 0) return;
 
+    // Validation passed → show confirmation dialog
+    setIsConfirmSaveOpen(true);
+  };
+
+  // Step 2: User confirmed → actually save
+  const handleConfirmSave = async () => {
     setIsSaving(true);
     setPageError(null);
 
     try {
       const apiPayload = toApiPayload(payload);
-      const saved =
-        isEditing && id
-          ? await updateRequest(id, apiPayload)
-          : await createRequest(apiPayload);
 
-      setRequest(saved);
-      setPayload(toFormPayload(saved));
-      setSuccessMessage(
-        isEditing ? "บันทึกการเปลี่ยนแปลงแล้ว" : "เพิ่ม Request แล้ว"
-      );
-
-      if (!isEditing) {
-        navigate(`/requests/${saved.id}/edit`, { replace: true });
+      if (isEditing && id) {
+        await updateRequest(id, apiPayload);
+      } else {
+        await createRequest(apiPayload);
       }
+
+      // Save successful → navigate to main page
+      setIsConfirmSaveOpen(false);
+      navigate("/", { replace: true });
     } catch (caught) {
+      setIsConfirmSaveOpen(false);
       setPageError(
         caught instanceof Error ? caught.message : "ไม่สามารถบันทึกข้อมูลได้"
       );
@@ -154,7 +154,7 @@ export const RequestFormPage = () => {
       setPageError(
         caught instanceof Error ? caught.message : "ไม่สามารถลบ Request ได้"
       );
-      setIsConfirmOpen(false);
+      setIsConfirmDeleteOpen(false);
     } finally {
       setIsDeleting(false);
     }
@@ -180,12 +180,6 @@ export const RequestFormPage = () => {
 
       <section className="panel">
         {pageError ? <div className="alert alert--error">{pageError}</div> : null}
-        {successMessage ? (
-          <div className="alert alert--success">
-            <CheckCircle2 size={18} />
-            {successMessage}
-          </div>
-        ) : null}
 
         {isLoading ? (
           <div className="loading-block">กำลังโหลดข้อมูล Request</div>
@@ -267,7 +261,7 @@ export const RequestFormPage = () => {
                 <Button
                   disabled={isSaving || isDeleting}
                   icon={<Trash2 size={18} />}
-                  onClick={() => setIsConfirmOpen(true)}
+                  onClick={() => setIsConfirmDeleteOpen(true)}
                   variant="danger"
                 >
                   ลบ
@@ -285,13 +279,7 @@ export const RequestFormPage = () => {
                   type="submit"
                   variant="primary"
                 >
-                  {isEditing
-                    ? isSaving
-                      ? "กำลังบันทึก"
-                      : "บันทึกการเปลี่ยนแปลง"
-                    : isSaving
-                      ? "กำลังบันทึก"
-                      : "บันทึก"}
+                  {isEditing ? "บันทึกการเปลี่ยนแปลง" : "บันทึก"}
                 </Button>
               </div>
             </div>
@@ -299,14 +287,32 @@ export const RequestFormPage = () => {
         )}
       </section>
 
+      {/* Confirm save → then navigate to main page */}
+      <ConfirmDialog
+        confirmText="ยืนยัน"
+        isBusy={isSaving}
+        isOpen={isConfirmSaveOpen}
+        message={
+          isEditing
+            ? "คุณต้องการบันทึกการเปลี่ยนแปลงนี้หรือไม่?"
+            : "คุณต้องการบันทึก Request นี้หรือไม่?"
+        }
+        onCancel={() => setIsConfirmSaveOpen(false)}
+        onConfirm={() => void handleConfirmSave()}
+        title="ยืนยันการบันทึก"
+        variant="confirm"
+      />
+
+      {/* Delete confirmation */}
       <ConfirmDialog
         confirmText="ลบ Request"
         isBusy={isDeleting}
-        isOpen={isConfirmOpen}
+        isOpen={isConfirmDeleteOpen}
         message="รายการนี้จะถูกลบแบบ Soft Delete และบันทึกวันเวลาที่ลบไว้ในฐานข้อมูล"
-        onCancel={() => setIsConfirmOpen(false)}
+        onCancel={() => setIsConfirmDeleteOpen(false)}
         onConfirm={() => void handleDelete()}
         title="ยืนยันการลบ"
+        variant="danger"
       />
     </section>
   );

@@ -1,7 +1,7 @@
 import { Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { ServiceRequest } from "../types/request";
-import { formatDateTime } from "../utils/format";
+import { REQUEST_TYPE_COLORS, type RequestType, type ServiceRequest } from "../types";
+import { formatDateTime } from "../utils";
 
 type RequestTableProps = {
   requests: ServiceRequest[];
@@ -22,7 +22,10 @@ export const RequestTable = ({ requests }: RequestTableProps) => (
         </tr>
       </thead>
       <tbody>
-        {requests.map((request) => (
+        {requests.map((request) => {
+          const chipColors =
+            REQUEST_TYPE_COLORS[request.requestType as RequestType];
+          return (
           <tr key={request.id}>
             <td data-label="เลขที่ Request">
               <span className="request-no">{request.requestNo}</span>
@@ -31,7 +34,20 @@ export const RequestTable = ({ requests }: RequestTableProps) => (
               <span className="table-title">{request.title}</span>
             </td>
             <td data-label="ประเภท">
-              <span className="type-chip">{request.requestType}</span>
+              <span
+                className="type-chip"
+                style={
+                  chipColors
+                    ? {
+                        background: chipColors.bg,
+                        color: chipColors.color,
+                        borderColor: chipColors.border
+                      }
+                    : undefined
+                }
+              >
+                {request.requestType}
+              </span>
             </td>
             <td data-label="ผู้ส่งคำขอ">{request.requesterName}</td>
             <td data-label="อีเมล">
@@ -52,7 +68,8 @@ export const RequestTable = ({ requests }: RequestTableProps) => (
               </Link>
             </td>
           </tr>
-        ))}
+        );
+        })}
       </tbody>
     </table>
   </div>

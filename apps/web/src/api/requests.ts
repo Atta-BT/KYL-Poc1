@@ -4,7 +4,7 @@ import type {
   RequestPayloadForApi,
   RequestType,
   ServiceRequest
-} from "../types/request";
+} from "../types";
 
 export type ListRequestsOptions = {
   page: number;

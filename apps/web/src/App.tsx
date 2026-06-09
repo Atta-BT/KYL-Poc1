@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Shell } from "./components/Shell";
+import { Shell } from "./components";
 import { RequestFormPage } from "./pages/RequestFormPage";
 import { RequestListPage } from "./pages/RequestListPage";
 

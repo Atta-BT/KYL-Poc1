@@ -3,7 +3,7 @@ import {
   type RequestPayload,
   type RequestPayloadForApi,
   type RequestType
-} from "../types/request";
+} from "../types";
 
 export type FormErrors = Partial<Record<keyof RequestPayload, string>>;
 

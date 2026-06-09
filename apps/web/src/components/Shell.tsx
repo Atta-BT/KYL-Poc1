@@ -8,13 +8,16 @@ type ShellProps = {
 
 export const Shell = ({ children }: ShellProps) => (
   <div className="app-shell">
+    <div className="app-topbar">
+      <span>สำนักทรัพยากรการเรียนรู้ฯ มหาวิทยาลัย</span>
+    </div>
     <header className="app-header">
       <div className="brand">
         <div className="brand__mark" aria-hidden="true">
           <LibraryBig size={24} />
         </div>
         <div>
-          <p>สำนักทรัพยากรการเรียนรู้ฯ</p>
+          <p>Integrated Service Platform</p>
           <h1>Request Management</h1>
         </div>
       </div>
@@ -31,4 +34,3 @@ export const Shell = ({ children }: ShellProps) => (
     <main className="app-main">{children}</main>
   </div>
 );
-
