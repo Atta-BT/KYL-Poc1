@@ -1,7 +1,7 @@
 import { LogIn, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components";
 import { login, ApiError } from "../api";
 
@@ -16,7 +16,7 @@ export const LoginPage = () => {
   const center = searchParams.get("center") ?? "learning-request-center";
   const returnTo = searchParams.get("returnTo") ?? "/requests";
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,15 +47,15 @@ export const LoginPage = () => {
     event.preventDefault();
     setError(null);
 
-    if (!username.trim() || !password.trim()) {
-      setError("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+    if (!email.trim() || !password.trim()) {
+      setError("กรุณากรอกอีเมลและรหัสผ่าน");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const { user } = await login(username.trim(), password.trim());
+      const { user } = await login(email.trim(), password.trim());
 
       const isStaffOrStudentCenter = center === "learning-request-center" || center === "digital-collection";
       const isPublicServiceCenter = center === "public-service";
@@ -113,14 +113,14 @@ export const LoginPage = () => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-field">
-            <span>ชื่อผู้ใช้</span>
+            <span>อีเมล</span>
             <input
-              autoComplete="username"
+              autoComplete="email"
               disabled={isLoading}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="กรอกชื่อผู้ใช้"
-              type="text"
-              value={username}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="กรอกอีเมล"
+              type="email"
+              value={email}
             />
           </label>
 
@@ -138,7 +138,12 @@ export const LoginPage = () => {
 
           {error ? <div className="alert alert--error">{error}</div> : null}
 
-          <div className="auth-actions">
+          <div className="auth-actions" style={center === "public-service" ? { display: "flex", justifyContent: "space-between", alignItems: "center" } : undefined}>
+            {center === "public-service" && (
+              <Link to="/register" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "var(--primary)" }}>
+                ยังไม่มีบัญชีผู้ใช้? สมัครสมาชิก
+              </Link>
+            )}
             <Button
               disabled={isLoading}
               icon={<LogIn size={18} />}

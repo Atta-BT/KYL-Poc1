@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Shell } from "./components";
 import { InterviewPage } from "./pages/InterviewPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { RequestFormPage } from "./pages/RequestFormPage";
 import { RequestListPage } from "./pages/RequestListPage";
 
@@ -12,6 +13,7 @@ export const App = () => (
         <Route path="/" element={<InterviewPage />} />
         <Route path="/interview" element={<InterviewPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/requests" element={<RequestListPage />} />
         <Route path="/requests/new" element={<RequestFormPage />} />
         <Route path="/requests/:id/edit" element={<RequestFormPage />} />

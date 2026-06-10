@@ -185,7 +185,7 @@ export const RequestFormPage = () => {
     <section className="page-stack">
       <div className="page-title-row">
         <div>
-          <Link className="back-link" to="/">
+          <Link className="back-link" to="/requests">
             <ArrowLeft size={18} />
             กลับหน้ารายการ
           </Link>
@@ -296,7 +296,7 @@ export const RequestFormPage = () => {
                 <span />
               )}
               <div className="form-actions__right">
-                <Link className="button button--ghost" to="/">
+                <Link className="button button--ghost" to="/requests">
                   ยกเลิก
                 </Link>
                 <Button

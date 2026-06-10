@@ -5,27 +5,61 @@ export const authRouter = Router();
 
 authRouter.post("/login", async (req, res, next) => {
   try {
-    const { username, password } = req.body as {
-      username?: string;
+    const { email, password } = req.body as {
+      email?: string;
       password?: string;
     };
 
-    if (!username?.trim() || !password?.trim()) {
-      res.status(400).json({ message: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" });
+    if (!email?.trim() || !password?.trim()) {
+      res.status(400).json({ message: "กรุณากรอกอีเมลและรหัสผ่าน" });
       return;
     }
 
     const user = await authRepository.findByCredentials(
-      username.trim(),
+      email.trim(),
       password.trim()
     );
 
     if (!user) {
-      res.status(401).json({ message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
+      res.status(401).json({ message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
       return;
     }
 
     res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post("/register", async (req, res, next) => {
+  try {
+    const { username, password, fullName, email } = req.body as {
+      username?: string;
+      password?: string;
+      fullName?: string;
+      email?: string;
+    };
+
+    if (!username?.trim() || !password?.trim() || !fullName?.trim() || !email?.trim()) {
+      res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
+      return;
+    }
+
+    const existingUser = await authRepository.findByUsername(username.trim());
+    if (existingUser) {
+      res.status(400).json({ message: "ชื่อผู้ใช้นี้มีผู้ใช้งานแล้ว" });
+      return;
+    }
+
+    const newUser = await authRepository.create({
+      username: username.trim(),
+      password: password.trim(),
+      fullName: fullName.trim(),
+      email: email.trim(),
+      role: "user"
+    });
+
+    res.status(201).json({ user: newUser });
   } catch (error) {
     next(error);
   }
