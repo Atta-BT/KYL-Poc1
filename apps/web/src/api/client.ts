@@ -21,10 +21,20 @@ export const apiFetch = async <T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> => {
+  const userJson = sessionStorage.getItem("kyl-user");
+  const user = userJson ? JSON.parse(userJson) : null;
+  
+  const authHeaders: Record<string, string> = {};
+  if (user) {
+    authHeaders["X-User-Role"] = user.role;
+    authHeaders["X-User-Email"] = user.email;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders,
       ...init.headers
     }
   });

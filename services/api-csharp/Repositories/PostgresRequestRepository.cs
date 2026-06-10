@@ -27,10 +27,11 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
 
         await using var listCommand = dataSource.CreateCommand(
             $"""
-            SELECT *
-            FROM service_requests
+            SELECT sr.*, rt.name AS request_type_name
+            FROM service_requests sr
+            JOIN request_types rt ON rt.id = sr.request_type_id
             WHERE {whereSql}
-            ORDER BY created_at DESC, request_no DESC
+            ORDER BY sr.created_at DESC, sr.request_no DESC
             LIMIT @limit OFFSET @offset
             """
         );
@@ -55,9 +56,10 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
             """
-            SELECT *
-            FROM service_requests
-            WHERE id = @id AND deleted_at IS NULL
+            SELECT sr.*, rt.name AS request_type_name
+            FROM service_requests sr
+            JOIN request_types rt ON rt.id = sr.request_type_id
+            WHERE sr.id = @id AND sr.deleted_at IS NULL
             """
         );
         command.Parameters.AddWithValue("id", id);
@@ -73,11 +75,19 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
             """
-            INSERT INTO service_requests
-              (title, request_type, requester_name, requester_email, detail)
-            VALUES
-              (@title, @requestType, @requesterName, @requesterEmail, @detail)
-            RETURNING *
+            WITH inserted AS (
+              INSERT INTO service_requests
+                (title, request_type_id, requester_name, requester_email, detail)
+              VALUES (
+                @title,
+                (SELECT id FROM request_types WHERE name = @requestType),
+                @requesterName, @requesterEmail, @detail
+              )
+              RETURNING *
+            )
+            SELECT i.*, rt.name AS request_type_name
+            FROM inserted i
+            JOIN request_types rt ON rt.id = i.request_type_id
             """
         );
         AddPayloadParameters(command, payload);
@@ -95,15 +105,20 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
             """
-            UPDATE service_requests
-            SET
-              title = @title,
-              request_type = @requestType,
-              requester_name = @requesterName,
-              requester_email = @requesterEmail,
-              detail = @detail
-            WHERE id = @id AND deleted_at IS NULL
-            RETURNING *
+            WITH updated AS (
+              UPDATE service_requests
+              SET
+                title           = @title,
+                request_type_id = (SELECT id FROM request_types WHERE name = @requestType),
+                requester_name  = @requesterName,
+                requester_email = @requesterEmail,
+                detail          = @detail
+              WHERE id = @id AND deleted_at IS NULL
+              RETURNING *
+            )
+            SELECT u.*, rt.name AS request_type_name
+            FROM updated u
+            JOIN request_types rt ON rt.id = u.request_type_id
             """
         );
         command.Parameters.AddWithValue("id", id);
@@ -120,10 +135,15 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
     {
         await using var command = dataSource.CreateCommand(
             """
-            UPDATE service_requests
-            SET deleted_at = now()
-            WHERE id = @id AND deleted_at IS NULL
-            RETURNING *
+            WITH deleted_row AS (
+              UPDATE service_requests
+              SET deleted_at = now()
+              WHERE id = @id AND deleted_at IS NULL
+              RETURNING *
+            )
+            SELECT d.*, rt.name AS request_type_name
+            FROM deleted_row d
+            JOIN request_types rt ON rt.id = d.request_type_id
             """
         );
         command.Parameters.AddWithValue("id", id);
@@ -152,7 +172,7 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
 
         if (!string.IsNullOrWhiteSpace(type))
         {
-            clauses.Add("request_type = @type");
+            clauses.Add("request_type_id = (SELECT id FROM request_types WHERE name = @type)");
         }
 
         return string.Join(" AND ", clauses);
@@ -192,7 +212,7 @@ public sealed class PostgresRequestRepository(NpgsqlDataSource dataSource)
             reader.GetGuid(reader.GetOrdinal("id")),
             reader.GetString(reader.GetOrdinal("request_no")),
             reader.GetString(reader.GetOrdinal("title")),
-            reader.GetString(reader.GetOrdinal("request_type")),
+            reader.GetString(reader.GetOrdinal("request_type_name")),
             reader.GetString(reader.GetOrdinal("requester_name")),
             reader.GetString(reader.GetOrdinal("requester_email")),
             reader.GetString(reader.GetOrdinal("detail")),

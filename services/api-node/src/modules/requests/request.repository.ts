@@ -10,7 +10,8 @@ type RequestRow = {
   id: string;
   request_no: string;
   title: string;
-  request_type: ServiceRequest["requestType"];
+  request_type_id: number;
+  request_type_name: ServiceRequest["requestType"];
   requester_name: string;
   requester_email: string;
   detail: string;
@@ -23,7 +24,7 @@ const toRequest = (row: RequestRow): ServiceRequest => ({
   id: row.id,
   requestNo: row.request_no,
   title: row.title,
-  requestType: row.request_type,
+  requestType: row.request_type_name,
   requesterName: row.requester_name,
   requesterEmail: row.requester_email,
   detail: row.detail,
@@ -32,7 +33,7 @@ const toRequest = (row: RequestRow): ServiceRequest => ({
   deletedAt: row.deleted_at ? row.deleted_at.toISOString() : null
 });
 
-const buildListFilter = (params: ListRequestParams) => {
+const buildListFilter = (params: ListRequestParams, userContext?: { role: string; email: string }) => {
   const clauses = ["deleted_at IS NULL"];
   const values: unknown[] = [];
 
@@ -49,7 +50,14 @@ const buildListFilter = (params: ListRequestParams) => {
 
   if (params.type) {
     values.push(params.type);
-    clauses.push(`request_type = $${values.length}`);
+    clauses.push(
+      `request_type_id = (SELECT id FROM request_types WHERE name = $${values.length})`
+    );
+  }
+
+  if (userContext && (userContext.role === "student" || userContext.role === "user")) {
+    values.push(userContext.email);
+    clauses.push(`requester_email = $${values.length}`);
   }
 
   return {
@@ -59,8 +67,8 @@ const buildListFilter = (params: ListRequestParams) => {
 };
 
 export const requestRepository = {
-  async list(params: ListRequestParams) {
-    const { whereSql, values } = buildListFilter(params);
+  async list(params: ListRequestParams, userContext?: { role: string; email: string }) {
+    const { whereSql, values } = buildListFilter(params, userContext);
     const offset = (params.page - 1) * params.pageSize;
 
     const countResult = await pool.query<{ total: string }>(
@@ -69,10 +77,11 @@ export const requestRepository = {
     );
 
     const result = await pool.query<RequestRow>(
-      `SELECT *
-       FROM service_requests
+      `SELECT sr.*, rt.name AS request_type_name
+       FROM service_requests sr
+       JOIN request_types rt ON rt.id = sr.request_type_id
        WHERE ${whereSql}
-       ORDER BY created_at DESC, request_no DESC
+       ORDER BY sr.created_at DESC, sr.request_no DESC
        LIMIT $${values.length + 1}
        OFFSET $${values.length + 2}`,
       [...values, params.pageSize, offset]
@@ -86,9 +95,10 @@ export const requestRepository = {
 
   async findById(id: string) {
     const result = await pool.query<RequestRow>(
-      `SELECT *
-       FROM service_requests
-       WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT sr.*, rt.name AS request_type_name
+       FROM service_requests sr
+       JOIN request_types rt ON rt.id = sr.request_type_id
+       WHERE sr.id = $1 AND sr.deleted_at IS NULL`,
       [id]
     );
 
@@ -97,10 +107,19 @@ export const requestRepository = {
 
   async create(payload: RequestPayload) {
     const result = await pool.query<RequestRow>(
-      `INSERT INTO service_requests
-        (title, request_type, requester_name, requester_email, detail)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+      `WITH inserted AS (
+         INSERT INTO service_requests
+           (title, request_type_id, requester_name, requester_email, detail)
+         VALUES (
+           $1,
+           (SELECT id FROM request_types WHERE name = $2),
+           $3, $4, $5
+         )
+         RETURNING *
+       )
+       SELECT i.*, rt.name AS request_type_name
+       FROM inserted i
+       JOIN request_types rt ON rt.id = i.request_type_id`,
       [
         payload.title,
         payload.requestType,
@@ -115,15 +134,20 @@ export const requestRepository = {
 
   async update(id: string, payload: RequestPayload) {
     const result = await pool.query<RequestRow>(
-      `UPDATE service_requests
-       SET
-        title = $2,
-        request_type = $3,
-        requester_name = $4,
-        requester_email = $5,
-        detail = $6
-       WHERE id = $1 AND deleted_at IS NULL
-       RETURNING *`,
+      `WITH updated AS (
+         UPDATE service_requests
+         SET
+           title           = $2,
+           request_type_id = (SELECT id FROM request_types WHERE name = $3),
+           requester_name  = $4,
+           requester_email = $5,
+           detail          = $6
+         WHERE id = $1 AND deleted_at IS NULL
+         RETURNING *
+       )
+       SELECT u.*, rt.name AS request_type_name
+       FROM updated u
+       JOIN request_types rt ON rt.id = u.request_type_id`,
       [
         id,
         payload.title,
@@ -143,10 +167,15 @@ export const requestRepository = {
 
   async softDelete(id: string) {
     const result = await pool.query<RequestRow>(
-      `UPDATE service_requests
-       SET deleted_at = now()
-       WHERE id = $1 AND deleted_at IS NULL
-       RETURNING *`,
+      `WITH deleted_row AS (
+         UPDATE service_requests
+         SET deleted_at = now()
+         WHERE id = $1 AND deleted_at IS NULL
+         RETURNING *
+       )
+       SELECT d.*, rt.name AS request_type_name
+       FROM deleted_row d
+       JOIN request_types rt ON rt.id = d.request_type_id`,
       [id]
     );
 

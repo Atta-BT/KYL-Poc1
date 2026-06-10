@@ -1,6 +1,6 @@
 import { Filter, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button, EmptyState, Pagination, RequestTable } from "../components";
 import { listRequests } from "../api";
 import {
@@ -13,6 +13,7 @@ const PAGE_SIZE = 10;
 const DEBOUNCE_MS = 400;
 
 export const RequestListPage = () => {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -72,7 +73,7 @@ export const RequestListPage = () => {
     <section className="page-stack">
       <div className="page-title-row">
         <div>
-          <p className="eyebrow">Integrated Service Platform</p>
+          <p className="eyebrow">KYL Learning Resources Center</p>
           <h2>รายการ Request</h2>
         </div>
         <Link className="button button--primary" to="/requests/new">

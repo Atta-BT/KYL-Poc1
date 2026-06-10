@@ -57,7 +57,19 @@ export const RequestFormPage = () => {
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    const userJson = sessionStorage.getItem("kyl-user");
+    const user = userJson ? JSON.parse(userJson) : null;
+
+    if (!id) {
+      if (user) {
+        setPayload((current) => ({
+          ...current,
+          requesterName: user.fullName || "",
+          requesterEmail: user.email || ""
+        }));
+      }
+      return;
+    }
 
     const load = async () => {
       setIsLoading(true);
@@ -65,6 +77,15 @@ export const RequestFormPage = () => {
 
       try {
         const response = await getRequest(id);
+
+        if (user && (user.role === "student" || user.role === "user")) {
+          if (response.requesterEmail !== user.email) {
+            setPageError("คุณไม่มีสิทธิ์เข้าถึงหรือแก้ไข Request นี้");
+            setIsLoading(false);
+            return;
+          }
+        }
+
         setRequest(response);
         setPayload(toFormPayload(response));
       } catch (caught) {
@@ -130,7 +151,7 @@ export const RequestFormPage = () => {
 
       // Save successful → navigate to main page
       setIsConfirmSaveOpen(false);
-      navigate("/", { replace: true });
+      navigate("/requests", { replace: true });
     } catch (caught) {
       setIsConfirmSaveOpen(false);
       setPageError(
@@ -149,7 +170,7 @@ export const RequestFormPage = () => {
 
     try {
       await deleteRequest(id);
-      navigate("/", { replace: true });
+      navigate("/requests", { replace: true });
     } catch (caught) {
       setPageError(
         caught instanceof Error ? caught.message : "ไม่สามารถลบ Request ได้"
@@ -183,6 +204,11 @@ export const RequestFormPage = () => {
 
         {isLoading ? (
           <div className="loading-block">กำลังโหลดข้อมูล Request</div>
+        ) : pageError && !request ? (
+          <div style={{ padding: "40px 0", textAlign: "center" }}>
+            <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>คุณไม่มีสิทธิ์เข้าถึงหรือแก้ไขข้อมูลรายการนี้</p>
+            <Link className="button button--primary" to="/">กลับหน้าหลัก</Link>
+          </div>
         ) : (
           <form className="request-form" onSubmit={handleSubmit}>
             <div className="form-grid">

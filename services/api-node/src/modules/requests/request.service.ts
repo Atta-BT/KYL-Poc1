@@ -8,9 +8,10 @@ import type {
 
 export const requestService = {
   async list(
-    params: ListRequestParams
+    params: ListRequestParams,
+    userContext?: { role: string; email: string }
   ): Promise<PagedResult<ServiceRequest>> {
-    const { data, total } = await requestRepository.list(params);
+    const { data, total } = await requestRepository.list(params, userContext);
 
     return {
       data,

@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { env } from "./config/env.js";
 import { pool } from "./db/pool.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { authRouter } from "./modules/auth/auth.routes.js";
 import { requestRouter } from "./modules/requests/request.routes.js";
 import { requestTypes } from "./modules/requests/request.types.js";
 
@@ -34,6 +35,7 @@ export const createApp = () => {
     res.json(requestTypes);
   });
 
+  app.use("/api/auth", authRouter);
   app.use("/api/requests", requestRouter);
   app.use(errorHandler);
 
