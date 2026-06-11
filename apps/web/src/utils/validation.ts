@@ -39,7 +39,30 @@ export const toApiPayload = (
     requestType: payload.requestType as RequestType,
     requesterName: payload.requesterName.trim(),
     requesterEmail: payload.requesterEmail.trim(),
-    detail: payload.detail.trim()
+    detail: payload.detail.trim(),
+
+    ithenticateStatus: payload.ithenticateStatus,
+    ithenticateFaculty: payload.ithenticateFaculty,
+    ithenticateFacultyOther: payload.ithenticateFacultyOther,
+    ithenticateTelephone: payload.ithenticateTelephone,
+    ithenticateFiles: payload.ithenticateFiles,
+    ithenticateExclusionFilters: payload.ithenticateExclusionFilters,
+    ithenticateWantAiReport: payload.ithenticateWantAiReport,
+
+    fulltextStatus: payload.fulltextStatus,
+    fulltextFaculty: payload.fulltextFaculty,
+    fulltextTelephone: payload.fulltextTelephone,
+    fulltextArticleTitle: payload.fulltextArticleTitle,
+    fulltextDoi: payload.fulltextDoi,
+    fulltextMoreInfo: payload.fulltextMoreInfo,
+    fulltextPurchaseConsent: payload.fulltextPurchaseConsent,
+
+    deliveryStaffStudentId: payload.deliveryStaffStudentId,
+    deliveryStatus: payload.deliveryStatus,
+    deliveryFaculty: payload.deliveryFaculty,
+    deliveryBookTitle: payload.deliveryBookTitle,
+    deliveryLcCall: payload.deliveryLcCall,
+    deliveryCollection: payload.deliveryCollection
   };
 };
 

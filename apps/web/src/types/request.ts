@@ -17,6 +17,32 @@ export type ServiceRequest = {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+
+  // iThenticate specific fields
+  ithenticateStatus?: string | null;
+  ithenticateFaculty?: string | null;
+  ithenticateFacultyOther?: string | null;
+  ithenticateTelephone?: string | null;
+  ithenticateFiles?: string[] | null;
+  ithenticateExclusionFilters?: string[] | null;
+  ithenticateWantAiReport?: string | null;
+
+  // Find Full-text 4U specific fields
+  fulltextStatus?: string | null;
+  fulltextFaculty?: string | null;
+  fulltextTelephone?: string | null;
+  fulltextArticleTitle?: string | null;
+  fulltextDoi?: string | null;
+  fulltextMoreInfo?: string | null;
+  fulltextPurchaseConsent?: string | null;
+
+  // Book Delivery specific fields
+  deliveryStaffStudentId?: string | null;
+  deliveryStatus?: string | null;
+  deliveryFaculty?: string | null;
+  deliveryBookTitle?: string | null;
+  deliveryLcCall?: string | null;
+  deliveryCollection?: string | null;
 };
 
 export const REQUEST_TYPE_COLORS: Record<
@@ -46,6 +72,32 @@ export type RequestPayload = {
   requesterName: string;
   requesterEmail: string;
   detail: string;
+
+  // iThenticate specific fields
+  ithenticateStatus?: string | null;
+  ithenticateFaculty?: string | null;
+  ithenticateFacultyOther?: string | null;
+  ithenticateTelephone?: string | null;
+  ithenticateFiles?: string[] | null;
+  ithenticateExclusionFilters?: string[] | null;
+  ithenticateWantAiReport?: string | null;
+
+  // Find Full-text 4U specific fields
+  fulltextStatus?: string | null;
+  fulltextFaculty?: string | null;
+  fulltextTelephone?: string | null;
+  fulltextArticleTitle?: string | null;
+  fulltextDoi?: string | null;
+  fulltextMoreInfo?: string | null;
+  fulltextPurchaseConsent?: string | null;
+
+  // Book Delivery specific fields
+  deliveryStaffStudentId?: string | null;
+  deliveryStatus?: string | null;
+  deliveryFaculty?: string | null;
+  deliveryBookTitle?: string | null;
+  deliveryLcCall?: string | null;
+  deliveryCollection?: string | null;
 };
 
 export type RequestPayloadForApi = Omit<RequestPayload, "requestType"> & {

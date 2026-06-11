@@ -11,7 +11,30 @@ export const requestPayloadSchema = z.object({
     .string()
     .trim()
     .email("กรุณากรอกอีเมลให้ถูกต้อง"),
-  detail: z.string().trim().min(1, "กรุณากรอกรายละเอียด Request")
+  detail: z.string().trim().min(1, "กรุณากรอกรายละเอียด Request"),
+  
+  ithenticateStatus: z.string().trim().optional().nullable(),
+  ithenticateFaculty: z.string().trim().optional().nullable(),
+  ithenticateFacultyOther: z.string().trim().optional().nullable(),
+  ithenticateTelephone: z.string().trim().optional().nullable(),
+  ithenticateFiles: z.array(z.string()).optional().nullable(),
+  ithenticateExclusionFilters: z.array(z.string()).optional().nullable(),
+  ithenticateWantAiReport: z.string().trim().optional().nullable(),
+
+  fulltextStatus: z.string().trim().optional().nullable(),
+  fulltextFaculty: z.string().trim().optional().nullable(),
+  fulltextTelephone: z.string().trim().optional().nullable(),
+  fulltextArticleTitle: z.string().trim().optional().nullable(),
+  fulltextDoi: z.string().trim().optional().nullable(),
+  fulltextMoreInfo: z.string().trim().optional().nullable(),
+  fulltextPurchaseConsent: z.string().trim().optional().nullable(),
+
+  deliveryStaffStudentId: z.string().trim().optional().nullable(),
+  deliveryStatus: z.string().trim().optional().nullable(),
+  deliveryFaculty: z.string().trim().optional().nullable(),
+  deliveryBookTitle: z.string().trim().optional().nullable(),
+  deliveryLcCall: z.string().trim().optional().nullable(),
+  deliveryCollection: z.string().trim().optional().nullable()
 });
 
 export const listQuerySchema = z.object({

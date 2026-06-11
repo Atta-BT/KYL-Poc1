@@ -60,6 +60,41 @@ BEFORE UPDATE ON service_requests
 FOR EACH ROW
 EXECUTE FUNCTION set_service_request_updated_at();
 
+-- ตารางเฉพาะสำหรับข้อมูล iThenticate
+CREATE TABLE IF NOT EXISTS ithenticate_requests (
+  request_id        uuid PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
+  status            text NOT NULL,
+  faculty           text,
+  faculty_other     text,
+  telephone         text NOT NULL,
+  files             text[] NOT NULL,
+  exclusion_filters text[] NOT NULL,
+  want_ai_report    text NOT NULL
+);
+
+-- ตารางเฉพาะสำหรับข้อมูล Find Full-text 4U
+CREATE TABLE IF NOT EXISTS fulltext_requests (
+  request_id        uuid PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
+  status            text NOT NULL,
+  faculty           text NOT NULL,
+  telephone         text,
+  article_title     text NOT NULL,
+  doi               text NOT NULL,
+  more_info         text,
+  purchase_consent  text NOT NULL
+);
+
+-- ตารางเฉพาะสำหรับข้อมูล Book Delivery
+CREATE TABLE IF NOT EXISTS book_delivery_requests (
+  request_id        uuid PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
+  staff_student_id  text NOT NULL,
+  status            text NOT NULL,
+  faculty           text NOT NULL,
+  book_title        text NOT NULL,
+  lc_call           text NOT NULL,
+  collection        text NOT NULL
+);
+
 -- ตารางผู้ใช้งาน
 CREATE TABLE IF NOT EXISTS users (
   id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),

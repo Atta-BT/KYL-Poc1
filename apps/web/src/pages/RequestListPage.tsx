@@ -14,6 +14,16 @@ const DEBOUNCE_MS = 400;
 
 export const RequestListPage = () => {
   const navigate = useNavigate();
+
+  const userJson = sessionStorage.getItem("kyl-user");
+  const user = userJson ? JSON.parse(userJson) : null;
+
+  useEffect(() => {
+    if (user && user.role === "user") {
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
+
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -68,6 +78,10 @@ export const RequestListPage = () => {
     setPage(1);
     setType(value);
   };
+
+  if (user && user.role === "user") {
+    return null;
+  }
 
   return (
     <section className="page-stack">

@@ -14,6 +14,10 @@ requestRouter.get("/", async (req, res, next) => {
     const userRole = req.headers["x-user-role"] as string | undefined;
     const userEmail = req.headers["x-user-email"] as string | undefined;
 
+    if (userRole === "user") {
+      throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงข้อมูลในส่วนนี้");
+    }
+
     const userContext = userRole && userEmail ? { role: userRole, email: userEmail } : undefined;
     const result = await requestService.list(query, userContext);
     res.json(result);
@@ -27,13 +31,17 @@ requestRouter.get("/:id", async (req, res, next) => {
     const userRole = req.headers["x-user-role"] as string | undefined;
     const userEmail = req.headers["x-user-email"] as string | undefined;
 
+    if (userRole === "user") {
+      throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงข้อมูลในส่วนนี้");
+    }
+
     const request = await requestService.findById(req.params.id);
 
     if (!request) {
       throw new HttpError(404, "ไม่พบ Request");
     }
 
-    if (userRole && (userRole === "student" || userRole === "user")) {
+    if (userRole && (userRole === "student" || userRole === "staff")) {
       if (request.requesterEmail !== userEmail) {
         throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงข้อมูลนี้");
       }
@@ -47,6 +55,10 @@ requestRouter.get("/:id", async (req, res, next) => {
 
 requestRouter.post("/", async (req, res, next) => {
   try {
+    const userRole = req.headers["x-user-role"] as string | undefined;
+    if (userRole === "user") {
+      throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงหรือจัดการข้อมูลในส่วนนี้");
+    }
     const payload = requestPayloadSchema.parse(req.body);
     const created = await requestService.create(payload);
     res.status(201).json(created);
@@ -60,13 +72,17 @@ requestRouter.put("/:id", async (req, res, next) => {
     const userRole = req.headers["x-user-role"] as string | undefined;
     const userEmail = req.headers["x-user-email"] as string | undefined;
 
+    if (userRole === "user") {
+      throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงหรือจัดการข้อมูลในส่วนนี้");
+    }
+
     const request = await requestService.findById(req.params.id);
 
     if (!request) {
       throw new HttpError(404, "ไม่พบ Request");
     }
 
-    if (userRole && (userRole === "student" || userRole === "user")) {
+    if (userRole && (userRole === "student" || userRole === "staff")) {
       if (request.requesterEmail !== userEmail) {
         throw new HttpError(403, "ไม่มีสิทธิ์แก้ไขข้อมูลนี้");
       }
@@ -85,13 +101,17 @@ requestRouter.delete("/:id", async (req, res, next) => {
     const userRole = req.headers["x-user-role"] as string | undefined;
     const userEmail = req.headers["x-user-email"] as string | undefined;
 
+    if (userRole === "user") {
+      throw new HttpError(403, "ไม่มีสิทธิ์เข้าถึงหรือจัดการข้อมูลในส่วนนี้");
+    }
+
     const request = await requestService.findById(req.params.id);
 
     if (!request) {
       throw new HttpError(404, "ไม่พบ Request");
     }
 
-    if (userRole && (userRole === "student" || userRole === "user")) {
+    if (userRole && (userRole === "student" || userRole === "staff")) {
       if (request.requesterEmail !== userEmail) {
         throw new HttpError(403, "ไม่มีสิทธิ์ลบข้อมูลนี้");
       }
