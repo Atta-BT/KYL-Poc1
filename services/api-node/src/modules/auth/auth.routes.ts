@@ -25,6 +25,14 @@ authRouter.post("/login", async (req, res, next) => {
       return;
     }
 
+    const ip = (req.headers["x-forwarded-for"] as string) || req.ip || req.socket.remoteAddress || null;
+    const userAgent = req.headers["user-agent"] || null;
+    try {
+      await authRepository.logLogin(user.id, ip, userAgent);
+    } catch (logError) {
+      console.error("Failed to log user login:", logError);
+    }
+
     res.json({ user });
   } catch (error) {
     next(error);

@@ -18,11 +18,7 @@ export const RequestListPage = () => {
   const userJson = sessionStorage.getItem("kyl-user");
   const user = userJson ? JSON.parse(userJson) : null;
 
-  useEffect(() => {
-    if (user && user.role === "user") {
-      navigate("/", { replace: true });
-    }
-  }, [user, navigate]);
+
 
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [page, setPage] = useState(1);
@@ -79,9 +75,7 @@ export const RequestListPage = () => {
     setType(value);
   };
 
-  if (user && user.role === "user") {
-    return null;
-  }
+
 
   return (
     <section className="page-stack">

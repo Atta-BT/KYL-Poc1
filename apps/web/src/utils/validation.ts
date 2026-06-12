@@ -51,6 +51,7 @@ export const toApiPayload = (
 
     fulltextStatus: payload.fulltextStatus,
     fulltextFaculty: payload.fulltextFaculty,
+    fulltextFacultyOther: payload.fulltextFacultyOther,
     fulltextTelephone: payload.fulltextTelephone,
     fulltextArticleTitle: payload.fulltextArticleTitle,
     fulltextDoi: payload.fulltextDoi,
@@ -60,6 +61,7 @@ export const toApiPayload = (
     deliveryStaffStudentId: payload.deliveryStaffStudentId,
     deliveryStatus: payload.deliveryStatus,
     deliveryFaculty: payload.deliveryFaculty,
+    deliveryFacultyOther: payload.deliveryFacultyOther,
     deliveryBookTitle: payload.deliveryBookTitle,
     deliveryLcCall: payload.deliveryLcCall,
     deliveryCollection: payload.deliveryCollection

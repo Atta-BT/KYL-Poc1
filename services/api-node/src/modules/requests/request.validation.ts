@@ -23,6 +23,7 @@ export const requestPayloadSchema = z.object({
 
   fulltextStatus: z.string().trim().optional().nullable(),
   fulltextFaculty: z.string().trim().optional().nullable(),
+  fulltextFacultyOther: z.string().trim().optional().nullable(),
   fulltextTelephone: z.string().trim().optional().nullable(),
   fulltextArticleTitle: z.string().trim().optional().nullable(),
   fulltextDoi: z.string().trim().optional().nullable(),
@@ -32,6 +33,7 @@ export const requestPayloadSchema = z.object({
   deliveryStaffStudentId: z.string().trim().optional().nullable(),
   deliveryStatus: z.string().trim().optional().nullable(),
   deliveryFaculty: z.string().trim().optional().nullable(),
+  deliveryFacultyOther: z.string().trim().optional().nullable(),
   deliveryBookTitle: z.string().trim().optional().nullable(),
   deliveryLcCall: z.string().trim().optional().nullable(),
   deliveryCollection: z.string().trim().optional().nullable()

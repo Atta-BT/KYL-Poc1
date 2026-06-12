@@ -31,6 +31,7 @@ type RequestRow = {
   // Joined fulltext fields
   fulltext_status?: string | null;
   fulltext_faculty?: string | null;
+  fulltext_faculty_other?: string | null;
   fulltext_telephone?: string | null;
   fulltext_article_title?: string | null;
   fulltext_doi?: string | null;
@@ -41,6 +42,7 @@ type RequestRow = {
   delivery_staff_student_id?: string | null;
   delivery_status?: string | null;
   delivery_faculty?: string | null;
+  delivery_faculty_other?: string | null;
   delivery_book_title?: string | null;
   delivery_lc_call?: string | null;
   delivery_collection?: string | null;
@@ -68,6 +70,7 @@ const toRequest = (row: RequestRow): ServiceRequest => ({
 
   fulltextStatus: row.fulltext_status,
   fulltextFaculty: row.fulltext_faculty,
+  fulltextFacultyOther: row.fulltext_faculty_other,
   fulltextTelephone: row.fulltext_telephone,
   fulltextArticleTitle: row.fulltext_article_title,
   fulltextDoi: row.fulltext_doi,
@@ -77,6 +80,7 @@ const toRequest = (row: RequestRow): ServiceRequest => ({
   deliveryStaffStudentId: row.delivery_staff_student_id,
   deliveryStatus: row.delivery_status,
   deliveryFaculty: row.delivery_faculty,
+  deliveryFacultyOther: row.delivery_faculty_other,
   deliveryBookTitle: row.delivery_book_title,
   deliveryLcCall: row.delivery_lc_call,
   deliveryCollection: row.delivery_collection
@@ -104,7 +108,7 @@ const buildListFilter = (params: ListRequestParams, userContext?: { role: string
     );
   }
 
-  if (userContext && (userContext.role === "student" || userContext.role === "staff")) {
+  if (userContext && (userContext.role === "student" || userContext.role === "staff" || userContext.role === "user")) {
     values.push(userContext.email);
     clauses.push(`requester_email = $${values.length}`);
   }
@@ -136,6 +140,7 @@ export const requestRepository = {
               ir.want_ai_report AS ithenticate_want_ai_report,
               fr.status AS fulltext_status,
               fr.faculty AS fulltext_faculty,
+              fr.faculty_other AS fulltext_faculty_other,
               fr.telephone AS fulltext_telephone,
               fr.article_title AS fulltext_article_title,
               fr.doi AS fulltext_doi,
@@ -144,6 +149,7 @@ export const requestRepository = {
               bdr.staff_student_id AS delivery_staff_student_id,
               bdr.status AS delivery_status,
               bdr.faculty AS delivery_faculty,
+              bdr.faculty_other AS delivery_faculty_other,
               bdr.book_title AS delivery_book_title,
               bdr.lc_call AS delivery_lc_call,
               bdr.collection AS delivery_collection
@@ -177,6 +183,7 @@ export const requestRepository = {
               ir.want_ai_report AS ithenticate_want_ai_report,
               fr.status AS fulltext_status,
               fr.faculty AS fulltext_faculty,
+              fr.faculty_other AS fulltext_faculty_other,
               fr.telephone AS fulltext_telephone,
               fr.article_title AS fulltext_article_title,
               fr.doi AS fulltext_doi,
@@ -185,6 +192,7 @@ export const requestRepository = {
               bdr.staff_student_id AS delivery_staff_student_id,
               bdr.status AS delivery_status,
               bdr.faculty AS delivery_faculty,
+              bdr.faculty_other AS delivery_faculty_other,
               bdr.book_title AS delivery_book_title,
               bdr.lc_call AS delivery_lc_call,
               bdr.collection AS delivery_collection
@@ -243,12 +251,13 @@ export const requestRepository = {
       } else if (payload.requestType === "บริการ Find Fulltext 4U") {
         await client.query(
           `INSERT INTO fulltext_requests
-             (request_id, status, faculty, telephone, article_title, doi, more_info, purchase_consent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+             (request_id, status, faculty, faculty_other, telephone, article_title, doi, more_info, purchase_consent)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             row.id,
             payload.fulltextStatus,
             payload.fulltextFaculty,
+            payload.fulltextFacultyOther || null,
             payload.fulltextTelephone || null,
             payload.fulltextArticleTitle,
             payload.fulltextDoi,
@@ -259,13 +268,14 @@ export const requestRepository = {
       } else if (payload.requestType === "บริการนำส่งหนังสือ (Book Delivery)") {
         await client.query(
           `INSERT INTO book_delivery_requests
-             (request_id, staff_student_id, status, faculty, book_title, lc_call, collection)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+             (request_id, staff_student_id, status, faculty, faculty_other, book_title, lc_call, collection)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             row.id,
             payload.deliveryStaffStudentId,
             payload.deliveryStatus,
             payload.deliveryFaculty,
+            payload.deliveryFacultyOther || null,
             payload.deliveryBookTitle,
             payload.deliveryLcCall,
             payload.deliveryCollection
@@ -355,12 +365,13 @@ export const requestRepository = {
       } else if (payload.requestType === "บริการ Find Fulltext 4U") {
         await client.query(
           `INSERT INTO fulltext_requests
-             (request_id, status, faculty, telephone, article_title, doi, more_info, purchase_consent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             (request_id, status, faculty, faculty_other, telephone, article_title, doi, more_info, purchase_consent)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
            ON CONFLICT (request_id) DO UPDATE
            SET
              status           = EXCLUDED.status,
              faculty          = EXCLUDED.faculty,
+             faculty_other    = EXCLUDED.faculty_other,
              telephone        = EXCLUDED.telephone,
              article_title    = EXCLUDED.article_title,
              doi              = EXCLUDED.doi,
@@ -370,6 +381,7 @@ export const requestRepository = {
             id,
             payload.fulltextStatus,
             payload.fulltextFaculty,
+            payload.fulltextFacultyOther || null,
             payload.fulltextTelephone || null,
             payload.fulltextArticleTitle,
             payload.fulltextDoi,
@@ -389,13 +401,14 @@ export const requestRepository = {
       } else if (payload.requestType === "บริการนำส่งหนังสือ (Book Delivery)") {
         await client.query(
           `INSERT INTO book_delivery_requests
-             (request_id, staff_student_id, status, faculty, book_title, lc_call, collection)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+             (request_id, staff_student_id, status, faculty, faculty_other, book_title, lc_call, collection)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            ON CONFLICT (request_id) DO UPDATE
            SET
              staff_student_id = EXCLUDED.staff_student_id,
              status           = EXCLUDED.status,
              faculty          = EXCLUDED.faculty,
+             faculty_other    = EXCLUDED.faculty_other,
              book_title       = EXCLUDED.book_title,
              lc_call          = EXCLUDED.lc_call,
              collection       = EXCLUDED.collection`,
@@ -404,6 +417,7 @@ export const requestRepository = {
             payload.deliveryStaffStudentId,
             payload.deliveryStatus,
             payload.deliveryFaculty,
+            payload.deliveryFacultyOther || null,
             payload.deliveryBookTitle,
             payload.deliveryLcCall,
             payload.deliveryCollection

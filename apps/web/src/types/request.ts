@@ -30,6 +30,7 @@ export type ServiceRequest = {
   // Find Full-text 4U specific fields
   fulltextStatus?: string | null;
   fulltextFaculty?: string | null;
+  fulltextFacultyOther?: string | null;
   fulltextTelephone?: string | null;
   fulltextArticleTitle?: string | null;
   fulltextDoi?: string | null;
@@ -40,6 +41,7 @@ export type ServiceRequest = {
   deliveryStaffStudentId?: string | null;
   deliveryStatus?: string | null;
   deliveryFaculty?: string | null;
+  deliveryFacultyOther?: string | null;
   deliveryBookTitle?: string | null;
   deliveryLcCall?: string | null;
   deliveryCollection?: string | null;
@@ -85,6 +87,7 @@ export type RequestPayload = {
   // Find Full-text 4U specific fields
   fulltextStatus?: string | null;
   fulltextFaculty?: string | null;
+  fulltextFacultyOther?: string | null;
   fulltextTelephone?: string | null;
   fulltextArticleTitle?: string | null;
   fulltextDoi?: string | null;
@@ -95,6 +98,7 @@ export type RequestPayload = {
   deliveryStaffStudentId?: string | null;
   deliveryStatus?: string | null;
   deliveryFaculty?: string | null;
+  deliveryFacultyOther?: string | null;
   deliveryBookTitle?: string | null;
   deliveryLcCall?: string | null;
   deliveryCollection?: string | null;

@@ -69,6 +69,7 @@ export const RequestFormPage = () => {
   // Find Full-text 4U conditional states
   const [ftStatus, setFtStatus] = useState<string>("");
   const [ftFaculty, setFtFaculty] = useState<string>("");
+  const [ftFacultyOther, setFtFacultyOther] = useState<string>("");
   const [ftTelephone, setFtTelephone] = useState<string>("");
   const [ftArticleTitle, setFtArticleTitle] = useState<string>("");
   const [ftDoi, setFtDoi] = useState<string>("");
@@ -79,6 +80,7 @@ export const RequestFormPage = () => {
   const [delId, setDelId] = useState<string>("");
   const [delStatus, setDelStatus] = useState<string>("");
   const [delFaculty, setDelFaculty] = useState<string>("");
+  const [delFacultyOther, setDelFacultyOther] = useState<string>("");
   const [delBookTitle, setDelBookTitle] = useState<string>("");
   const [delLcCall, setDelLcCall] = useState<string>("");
   const [delCollection, setDelCollection] = useState<string>("");
@@ -89,14 +91,6 @@ export const RequestFormPage = () => {
   const user = userJson ? JSON.parse(userJson) : null;
 
   useEffect(() => {
-    if (user && user.role === "user") {
-      navigate("/", { replace: true });
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    if (user && user.role === "user") return;
-
     if (!id) {
       const searchParams = new URLSearchParams(location.search);
       const preselectedType = searchParams.get("type");
@@ -148,6 +142,7 @@ export const RequestFormPage = () => {
         } else if (response.requestType === "บริการ Find Fulltext 4U") {
           setFtStatus(response.fulltextStatus || "");
           setFtFaculty(response.fulltextFaculty || "");
+          setFtFacultyOther(response.fulltextFacultyOther || "");
           setFtTelephone(response.fulltextTelephone || "");
           setFtArticleTitle(response.fulltextArticleTitle || "");
           setFtDoi(response.fulltextDoi || "");
@@ -157,6 +152,7 @@ export const RequestFormPage = () => {
           setDelId(response.deliveryStaffStudentId || "");
           setDelStatus(response.deliveryStatus || "");
           setDelFaculty(response.deliveryFaculty || "");
+          setDelFacultyOther(response.deliveryFacultyOther || "");
           setDelBookTitle(response.deliveryBookTitle || "");
           setDelLcCall(response.deliveryLcCall || "");
           setDelCollection(response.deliveryCollection || "");
@@ -213,7 +209,11 @@ export const RequestFormPage = () => {
       combinedErrors = { ...commonErrors, ...combinedErrors } as Record<string, string>;
     } else if (payload.requestType === "บริการ Find Fulltext 4U") {
       if (!ftStatus) combinedErrors.ftStatus = "กรุณาเลือกสถานะ";
-      if (!ftFaculty) combinedErrors.ftFaculty = "กรุณาเลือกคณะ";
+      if (!ftFaculty) {
+        combinedErrors.ftFaculty = "กรุณาเลือกคณะ";
+      } else if (ftFaculty === "อื่นๆ (โปรดระบุ)" && !ftFacultyOther.trim()) {
+        combinedErrors.ftFacultyOther = "กรุณาระบุคณะ/หน่วยงาน";
+      }
       if (!ftArticleTitle.trim()) combinedErrors.ftArticleTitle = "กรุณากรอกชื่อบทความ";
       if (!ftDoi.trim()) combinedErrors.ftDoi = "กรุณากรอก DOI";
       if (!ftPurchaseConsent) combinedErrors.ftPurchaseConsent = "กรุณาเลือกความต้องการจัดซื้อ";
@@ -226,7 +226,11 @@ export const RequestFormPage = () => {
     } else if (payload.requestType === "บริการนำส่งหนังสือ (Book Delivery)") {
       if (!delId.trim()) combinedErrors.delId = "กรุณากรอกรหัสนักศึกษา/พนักงาน";
       if (!delStatus) combinedErrors.delStatus = "กรุณาเลือกสถานภาพ";
-      if (!delFaculty) combinedErrors.delFaculty = "กรุณาเลือกคณะ";
+      if (!delFaculty) {
+        combinedErrors.delFaculty = "กรุณาเลือกคณะ";
+      } else if (delFaculty === "อื่นๆ (โปรดระบุ)" && !delFacultyOther.trim()) {
+        combinedErrors.delFacultyOther = "กรุณาระบุคณะ/หน่วยงาน";
+      }
       if (!delBookTitle.trim()) combinedErrors.delBookTitle = "กรุณากรอกชื่อหนังสือ";
       if (!delLcCall.trim()) combinedErrors.delLcCall = "กรุณากรอก LC Call Number";
       if (!delCollection) combinedErrors.delCollection = "กรุณาเลือก Collection";
@@ -273,6 +277,7 @@ export const RequestFormPage = () => {
         extraPayload = {
           fulltextStatus: ftStatus,
           fulltextFaculty: ftFaculty,
+          fulltextFacultyOther: ftFacultyOther || null,
           fulltextTelephone: ftTelephone || null,
           fulltextArticleTitle: ftArticleTitle,
           fulltextDoi: ftDoi,
@@ -285,6 +290,7 @@ export const RequestFormPage = () => {
           deliveryStaffStudentId: delId,
           deliveryStatus: delStatus,
           deliveryFaculty: delFaculty,
+          deliveryFacultyOther: delFacultyOther || null,
           deliveryBookTitle: delBookTitle,
           deliveryLcCall: delLcCall,
           deliveryCollection: delCollection
@@ -335,9 +341,6 @@ export const RequestFormPage = () => {
     }
   };
 
-  if (user && user.role === "user") {
-    return null;
-  }
 
   return (
     <section className="page-stack">
@@ -687,33 +690,58 @@ export const RequestFormPage = () => {
                     </select>
                   </FormField>
 
-                  <FormField
-                    error={errors.ftFaculty}
-                    htmlFor="ftFaculty"
-                    label="คณะ (Faculty) *"
-                  >
-                    <select
-                      id="ftFaculty"
-                      value={ftFaculty}
-                      onChange={(e) => {
-                        setFtFaculty(e.target.value);
-                        setErrors((current) => ({ ...current, ftFaculty: "" }));
-                      }}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                    <FormField
+                      error={errors.ftFaculty}
+                      htmlFor="ftFaculty"
+                      label="คณะ (Faculty) *"
                     >
-                      <option value="">เลือกคณะ</option>
-                      <option value="คณะแพทยศาสตร์ (Faculty of Medicine)">คณะแพทยศาสตร์ (Faculty of Medicine)</option>
-                      <option value="คณะทันตแพทยศาสตร์ (Faculty of Dentistry)">คณะทันตแพทยศาสตร์ (Faculty of Dentistry)</option>
-                      <option value="คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)">คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)</option>
-                      <option value="คณะพยาบาลศาสตร์ (Faculty of Nursing)">คณะพยาบาลศาสตร์ (Faculty of Nursing)</option>
-                      <option value="คณะวิทยาศาสตร์ (Faculty of Science)">คณะวิทยาศาสตร์ (Faculty of Science)</option>
-                      <option value="คณะวิศวกรรมศาสตร์ (Faculty of Engineering)">คณะวิศวกรรมศาสตร์ (Faculty of Engineering)</option>
-                      <option value="คณะวิทยาการจัดการ (Faculty of Management Sciences)">คณะวิทยาการจัดการ (Faculty of Management Sciences)</option>
-                      <option value="คณะศิลปศาสตร์ (Faculty of Liberal Arts)">คณะศิลปศาสตร์ (Faculty of Liberal Arts)</option>
-                      <option value="คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)">คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)</option>
-                      <option value="คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)">คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)</option>
-                      <option value="คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)">คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)</option>
-                    </select>
-                  </FormField>
+                      <select
+                        id="ftFaculty"
+                        value={ftFaculty}
+                        onChange={(e) => {
+                          setFtFaculty(e.target.value);
+                          setErrors((current) => ({ ...current, ftFaculty: "" }));
+                          if (e.target.value !== "อื่นๆ (โปรดระบุ)") {
+                            setFtFacultyOther("");
+                          }
+                        }}
+                      >
+                        <option value="">เลือกคณะ</option>
+                        <option value="คณะแพทยศาสตร์ (Faculty of Medicine)">คณะแพทยศาสตร์ (Faculty of Medicine)</option>
+                        <option value="คณะทันตแพทยศาสตร์ (Faculty of Dentistry)">คณะทันตแพทยศาสตร์ (Faculty of Dentistry)</option>
+                        <option value="คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)">คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)</option>
+                        <option value="คณะพยาบาลศาสตร์ (Faculty of Nursing)">คณะพยาบาลศาสตร์ (Faculty of Nursing)</option>
+                        <option value="คณะวิทยาศาสตร์ (Faculty of Science)">คณะวิทยาศาสตร์ (Faculty of Science)</option>
+                        <option value="คณะวิศวกรรมศาสตร์ (Faculty of Engineering)">คณะวิศวกรรมศาสตร์ (Faculty of Engineering)</option>
+                        <option value="คณะวิทยาการจัดการ (Faculty of Management Sciences)">คณะวิทยาการจัดการ (Faculty of Management Sciences)</option>
+                        <option value="คณะศิลปศาสตร์ (Faculty of Liberal Arts)">คณะศิลปศาสตร์ (Faculty of Liberal Arts)</option>
+                        <option value="คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)">คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)</option>
+                        <option value="คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)">คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)</option>
+                        <option value="คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)">คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)</option>
+                        <option value="อื่นๆ (โปรดระบุ)">อื่นๆ (โปรดระบุ)</option>
+                      </select>
+                    </FormField>
+
+                    {ftFaculty === "อื่นๆ (โปรดระบุ)" && (
+                      <FormField
+                        error={errors.ftFacultyOther}
+                        htmlFor="ftFacultyOther"
+                        label="คณะอื่น ๆ (โปรดระบุ) Other Faculties (please specify)"
+                      >
+                        <input
+                          id="ftFacultyOther"
+                          type="text"
+                          placeholder="ระบุคณะ/หน่วยงานของคุณ"
+                          value={ftFacultyOther}
+                          onChange={(e) => {
+                            setFtFacultyOther(e.target.value);
+                            setErrors((current) => ({ ...current, ftFacultyOther: "" }));
+                          }}
+                        />
+                      </FormField>
+                    )}
+                  </div>
 
                   <FormField
                     error={errors.ftTelephone}
@@ -858,33 +886,58 @@ export const RequestFormPage = () => {
                     </select>
                   </FormField>
 
-                  <FormField
-                    error={errors.delFaculty}
-                    htmlFor="delFaculty"
-                    label="Faculty *"
-                  >
-                    <select
-                      id="delFaculty"
-                      value={delFaculty}
-                      onChange={(e) => {
-                        setDelFaculty(e.target.value);
-                        setErrors((current) => ({ ...current, delFaculty: "" }));
-                      }}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                    <FormField
+                      error={errors.delFaculty}
+                      htmlFor="delFaculty"
+                      label="Faculty *"
                     >
-                      <option value="">เลือกคณะ</option>
-                      <option value="คณะแพทยศาสตร์ (Faculty of Medicine)">คณะแพทยศาสตร์ (Faculty of Medicine)</option>
-                      <option value="คณะทันตแพทยศาสตร์ (Faculty of Dentistry)">คณะทันตแพทยศาสตร์ (Faculty of Dentistry)</option>
-                      <option value="คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)">คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)</option>
-                      <option value="คณะพยาบาลศาสตร์ (Faculty of Nursing)">คณะพยาบาลศาสตร์ (Faculty of Nursing)</option>
-                      <option value="คณะวิทยาศาสตร์ (Faculty of Science)">คณะวิทยาศาสตร์ (Faculty of Science)</option>
-                      <option value="คณะวิศวกรรมศาสตร์ (Faculty of Engineering)">คณะวิศวกรรมศาสตร์ (Faculty of Engineering)</option>
-                      <option value="คณะวิทยาการจัดการ (Faculty of Management Sciences)">คณะวิทยาการจัดการ (Faculty of Management Sciences)</option>
-                      <option value="คณะศิลปศาสตร์ (Faculty of Liberal Arts)">คณะศิลปศาสตร์ (Faculty of Liberal Arts)</option>
-                      <option value="คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)">คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)</option>
-                      <option value="คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)">คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)</option>
-                      <option value="คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)">คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)</option>
-                    </select>
-                  </FormField>
+                      <select
+                        id="delFaculty"
+                        value={delFaculty}
+                        onChange={(e) => {
+                          setDelFaculty(e.target.value);
+                          setErrors((current) => ({ ...current, delFaculty: "" }));
+                          if (e.target.value !== "อื่นๆ (โปรดระบุ)") {
+                            setDelFacultyOther("");
+                          }
+                        }}
+                      >
+                        <option value="">เลือกคณะ</option>
+                        <option value="คณะแพทยศาสตร์ (Faculty of Medicine)">คณะแพทยศาสตร์ (Faculty of Medicine)</option>
+                        <option value="คณะทันตแพทยศาสตร์ (Faculty of Dentistry)">คณะทันตแพทยศาสตร์ (Faculty of Dentistry)</option>
+                        <option value="คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)">คณะเภสัชศาสตร์ (Faculty of Pharmaceutical Sciences)</option>
+                        <option value="คณะพยาบาลศาสตร์ (Faculty of Nursing)">คณะพยาบาลศาสตร์ (Faculty of Nursing)</option>
+                        <option value="คณะวิทยาศาสตร์ (Faculty of Science)">คณะวิทยาศาสตร์ (Faculty of Science)</option>
+                        <option value="คณะวิศวกรรมศาสตร์ (Faculty of Engineering)">คณะวิศวกรรมศาสตร์ (Faculty of Engineering)</option>
+                        <option value="คณะวิทยาการจัดการ (Faculty of Management Sciences)">คณะวิทยาการจัดการ (Faculty of Management Sciences)</option>
+                        <option value="คณะศิลปศาสตร์ (Faculty of Liberal Arts)">คณะศิลปศาสตร์ (Faculty of Liberal Arts)</option>
+                        <option value="คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)">คณะทรัพยากรธรรมชาติ (Faculty of Natural Resources)</option>
+                        <option value="คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)">คณะอุตสาหกรรมเกษตร (Faculty of Agro-Industry)</option>
+                        <option value="คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)">คณะการแพทย์แผนไทย (Faculty of Traditional Thai Medicine)</option>
+                        <option value="อื่นๆ (โปรดระบุ)">อื่นๆ (โปรดระบุ)</option>
+                      </select>
+                    </FormField>
+
+                    {delFaculty === "อื่นๆ (โปรดระบุ)" && (
+                      <FormField
+                        error={errors.delFacultyOther}
+                        htmlFor="delFacultyOther"
+                        label="คณะอื่น ๆ (โปรดระบุ) Other Faculties (please specify)"
+                      >
+                        <input
+                          id="delFacultyOther"
+                          type="text"
+                          placeholder="ระบุคณะ/หน่วยงานของคุณ"
+                          value={delFacultyOther}
+                          onChange={(e) => {
+                            setDelFacultyOther(e.target.value);
+                            setErrors((current) => ({ ...current, delFacultyOther: "" }));
+                          }}
+                        />
+                      </FormField>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-grid" style={{ marginTop: "18px" }}>

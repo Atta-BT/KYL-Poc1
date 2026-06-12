@@ -57,5 +57,13 @@ export const authRepository = {
     );
 
     return toAuthUser(result.rows[0]);
+  },
+
+  async logLogin(userId: string, ipAddress: string | null, userAgent: string | null): Promise<void> {
+    await pool.query(
+      `INSERT INTO login_logs (user_id, ip_address, user_agent)
+       VALUES ($1, $2, $3)`,
+      [userId, ipAddress, userAgent]
+    );
   }
 };

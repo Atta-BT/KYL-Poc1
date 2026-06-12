@@ -63,7 +63,7 @@ export const RequestTable = ({ requests }: RequestTableProps) => {
             <strong>สถานะ (Status):</strong> {request.fulltextStatus || "-"}
           </div>
           <div>
-            <strong>คณะ (Faculty):</strong> {request.fulltextFaculty || "-"}
+            <strong>คณะ (Faculty):</strong> {request.fulltextFaculty === "อื่นๆ (โปรดระบุ)" ? `อื่นๆ (${request.fulltextFacultyOther || "-"})` : (request.fulltextFaculty || "-")}
           </div>
           <div>
             <strong>เบอร์โทรศัพท์ติดต่อ:</strong> {request.fulltextTelephone || "-"}
@@ -94,7 +94,7 @@ export const RequestTable = ({ requests }: RequestTableProps) => {
             <strong>สถานภาพ (Status):</strong> {request.deliveryStatus || "-"}
           </div>
           <div>
-            <strong>คณะ (Faculty):</strong> {request.deliveryFaculty || "-"}
+            <strong>คณะ (Faculty):</strong> {request.deliveryFaculty === "อื่นๆ (โปรดระบุ)" ? `อื่นๆ (${request.deliveryFacultyOther || "-"})` : (request.deliveryFaculty || "-")}
           </div>
           <div>
             <strong>Collection:</strong> {request.deliveryCollection || "-"}
@@ -128,6 +128,7 @@ export const RequestTable = ({ requests }: RequestTableProps) => {
             <th>ประเภท</th>
             <th>ผู้ส่งคำขอ</th>
             <th>อีเมล</th>
+            <th>วันที่สร้าง</th>
             <th aria-label="actions" />
           </tr>
         </thead>
@@ -168,6 +169,9 @@ export const RequestTable = ({ requests }: RequestTableProps) => {
                       {request.requesterEmail}
                     </a>
                   </td>
+                  <td data-label="วันที่สร้าง">
+                    {formatDateTime(request.createdAt)}
+                  </td>
                   <td className="table-actions">
                     <div className="table-actions-inner">
                       <button
@@ -191,12 +195,9 @@ export const RequestTable = ({ requests }: RequestTableProps) => {
                 </tr>
                 {isExpanded && (
                   <tr className="detail-row">
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="detail-card">
                         <h4>ข้อมูลรายละเอียดคำขอแบบครบถ้วน</h4>
-                        <div className="detail-meta-group" style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px dashed var(--border)" }}>
-                          <strong>วันที่ส่งคำขอ:</strong> {formatDateTime(request.createdAt)}
-                        </div>
                         {renderDetails(request)}
                       </div>
                     </td>

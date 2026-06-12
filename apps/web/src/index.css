@@ -672,7 +672,7 @@ textarea:focus-visible {
 }
 
 .request-table th:nth-child(2) {
-  width: 22%;
+  width: 20%;
 }
 
 .request-table th:nth-child(3) {
@@ -684,11 +684,15 @@ textarea:focus-visible {
 }
 
 .request-table th:nth-child(5) {
-  width: 22%;
+  width: 18%;
 }
 
 .request-table th:nth-child(6) {
-  width: 110px;
+  width: 170px;
+}
+
+.request-table th:nth-child(7) {
+  width: 100px;
 }
 
 .request-table td {

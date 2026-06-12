@@ -313,24 +313,14 @@ export const InterviewPage = () => {
               </button>
 
               {isAuthenticated ? (
-                user?.role === "user" ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
-                    <div className="divider-line" style={{ margin: "4px 0" }} />
-                    <div className="login-options-hint" style={{ color: "var(--brand-accent)", fontWeight: "600", textAlign: "center", justifyContent: "center" }}>
-                      <Lock size={14} style={{ marginRight: "6px", verticalAlign: "middle" }} />
-                      เฉพาะนักศึกษาและบุคลากรเท่านั้นที่สามารถใช้บริการนี้ได้ (Only students and staff can request this service)
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    className="button button--primary"
-                    onClick={() => handleRequestService(activeService.typeKey)}
-                    disabled={activeService.hasPdpa && !consentChecked}
-                    type="button"
-                  >
-                    ใช้บริการ
-                  </button>
-                )
+                <button
+                  className="button button--primary"
+                  onClick={() => handleRequestService(activeService.typeKey)}
+                  disabled={activeService.hasPdpa && !consentChecked}
+                  type="button"
+                >
+                  ใช้บริการ
+                </button>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
                   <div className="divider-line" style={{ margin: "4px 0" }} />

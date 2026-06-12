@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS fulltext_requests (
   request_id        uuid PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
   status            text NOT NULL,
   faculty           text NOT NULL,
+  faculty_other     text,
   telephone         text,
   article_title     text NOT NULL,
   doi               text NOT NULL,
@@ -90,19 +91,31 @@ CREATE TABLE IF NOT EXISTS book_delivery_requests (
   staff_student_id  text NOT NULL,
   status            text NOT NULL,
   faculty           text NOT NULL,
+  faculty_other     text,
   book_title        text NOT NULL,
   lc_call           text NOT NULL,
   collection        text NOT NULL
-);
+);  
 
--- ตารางผู้ใช้งาน
 CREATE TABLE IF NOT EXISTS users (
   id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   username   text        NOT NULL UNIQUE,
   password   text        NOT NULL,
   full_name  text        NOT NULL,
   email      text        NOT NULL,
-  role       text        NOT NULL DEFAULT 'staff' CHECK (role IN ('admin', 'staff', 'student')),
+  role       text        NOT NULL DEFAULT 'staff' CHECK (role IN ('admin', 'staff', 'student', 'user')),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- ตารางเก็บบันทึกการ Login
+CREATE TABLE IF NOT EXISTS login_logs (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  logged_in_at  timestamptz NOT NULL DEFAULT now(),
+  ip_address    text,
+  user_agent    text
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_logs_user_id ON login_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_logs_logged_in_at ON login_logs(logged_in_at DESC);
 
