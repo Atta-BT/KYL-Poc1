@@ -2,9 +2,12 @@ import { Filter, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, EmptyState, Pagination, RequestTable } from "../components";
-import { listRequests } from "../api";
+import { listRequests, updateRequestStatus, replyToRequest } from "../api";
 import {
+  REQUEST_STATUSES,
+  REQUEST_STATUS_META,
   REQUEST_TYPES,
+  type RequestStatus,
   type RequestType,
   type ServiceRequest
 } from "../types";
@@ -17,8 +20,7 @@ export const RequestListPage = () => {
 
   const userJson = sessionStorage.getItem("kyl-user");
   const user = userJson ? JSON.parse(userJson) : null;
-
-
+  const isAdmin = user?.role === "admin";
 
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [page, setPage] = useState(1);
@@ -27,6 +29,7 @@ export const RequestListPage = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [type, setType] = useState<RequestType | "">("");
+  const [status, setStatus] = useState<RequestStatus | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +52,8 @@ export const RequestListPage = () => {
         page,
         pageSize: PAGE_SIZE,
         search: debouncedSearch || undefined,
-        type: type || undefined
+        type: type || undefined,
+        status: status || undefined
       });
 
       setRequests(response.data);
@@ -64,7 +68,7 @@ export const RequestListPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, debouncedSearch, type]);
+  }, [page, debouncedSearch, type, status]);
 
   useEffect(() => {
     void loadRequests();
@@ -73,6 +77,33 @@ export const RequestListPage = () => {
   const handleTypeChange = (value: RequestType | "") => {
     setPage(1);
     setType(value);
+  };
+
+  const handleStatusFilterChange = (value: RequestStatus | "") => {
+    setPage(1);
+    setStatus(value);
+  };
+
+  const handleStatusChange = async (id: string, next: RequestStatus) => {
+    try {
+      await updateRequestStatus(id, next);
+      await loadRequests();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "ไม่สามารถอัปเดตสถานะได้"
+      );
+    }
+  };
+
+  const handleReply = async (id: string, reply: string) => {
+    try {
+      await replyToRequest(id, reply);
+      await loadRequests();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "ไม่สามารถบันทึกคำตอบได้"
+      );
+    }
   };
 
 
@@ -109,7 +140,7 @@ export const RequestListPage = () => {
               }
               value={type}
             >
-              <option value="">ทุกประเภท</option>
+              <option value="">ประเภท Request</option>
               {REQUEST_TYPES.map((requestType) => (
                 <option key={requestType} value={requestType}>
                   {requestType}
@@ -118,13 +149,24 @@ export const RequestListPage = () => {
             </select>
           </label>
 
-          <Button
-            icon={<RefreshCw size={18} />}
-            onClick={() => void loadRequests()}
-            variant="ghost"
-          >
-            รีเฟรช
-          </Button>
+          {isAdmin && (
+            <label className="filter-select">
+              <Filter size={18} aria-hidden="true" />
+              <select
+                onChange={(event) =>
+                  handleStatusFilterChange(event.target.value as RequestStatus | "")
+                }
+                value={status}
+              >
+                <option value="">ประเภท สถานะ</option>
+                {REQUEST_STATUSES.map((requestStatus) => (
+                  <option key={requestStatus} value={requestStatus}>
+                    {REQUEST_STATUS_META[requestStatus].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         {error ? <div className="alert alert--error">{error}</div> : null}
@@ -133,7 +175,12 @@ export const RequestListPage = () => {
           <div className="loading-block">กำลังโหลดรายการ Request</div>
         ) : requests.length > 0 ? (
           <>
-            <RequestTable requests={requests} />
+            <RequestTable
+              requests={requests}
+              isAdmin={isAdmin}
+              onStatusChange={handleStatusChange}
+              onReply={handleReply}
+            />
             <Pagination
               onPageChange={setPage}
               page={page}

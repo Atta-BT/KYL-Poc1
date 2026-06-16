@@ -3,90 +3,68 @@ import { HttpError } from "../../utils/httpError.js";
 import type {
   ListRequestParams,
   RequestPayload,
+  RequestStatus,
   ServiceRequest
 } from "./request.types.js";
+import { getPlugin, plugins } from "./services/registry.js";
 
-type RequestRow = {
+/** Base columns owned by the service_requests row (+ joined type name). */
+type BaseRow = {
   id: string;
   request_no: string;
   title: string;
-  request_type_id: number;
   request_type_name: ServiceRequest["requestType"];
   requester_name: string;
   requester_email: string;
   detail: string;
+  status: RequestStatus;
+  admin_reply: string | null;
+  admin_reply_at: Date | null;
+  admin_reply_by: string | null;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;
-
-  // Joined ithenticate fields
-  ithenticate_status?: string | null;
-  ithenticate_faculty?: string | null;
-  ithenticate_faculty_other?: string | null;
-  ithenticate_telephone?: string | null;
-  ithenticate_files?: string[] | null;
-  ithenticate_exclusion_filters?: string[] | null;
-  ithenticate_want_ai_report?: string | null;
-
-  // Joined fulltext fields
-  fulltext_status?: string | null;
-  fulltext_faculty?: string | null;
-  fulltext_faculty_other?: string | null;
-  fulltext_telephone?: string | null;
-  fulltext_article_title?: string | null;
-  fulltext_doi?: string | null;
-  fulltext_more_info?: string | null;
-  fulltext_purchase_consent?: string | null;
-
-  // Joined book delivery fields
-  delivery_staff_student_id?: string | null;
-  delivery_status?: string | null;
-  delivery_faculty?: string | null;
-  delivery_faculty_other?: string | null;
-  delivery_book_title?: string | null;
-  delivery_lc_call?: string | null;
-  delivery_collection?: string | null;
 };
 
-const toRequest = (row: RequestRow): ServiceRequest => ({
-  id: row.id,
-  requestNo: row.request_no,
-  title: row.title,
-  requestType: row.request_type_name,
-  requesterName: row.requester_name,
-  requesterEmail: row.requester_email,
-  detail: row.detail,
-  createdAt: row.created_at.toISOString(),
-  updatedAt: row.updated_at.toISOString(),
-  deletedAt: row.deleted_at ? row.deleted_at.toISOString() : null,
+/** SELECT columns and JOINs contributed by every registered service plugin. */
+const serviceSelectColumns = plugins
+  .map((plugin) => plugin.selectColumns)
+  .join(",\n              ");
 
-  ithenticateStatus: row.ithenticate_status,
-  ithenticateFaculty: row.ithenticate_faculty,
-  ithenticateFacultyOther: row.ithenticate_faculty_other,
-  ithenticateTelephone: row.ithenticate_telephone,
-  ithenticateFiles: row.ithenticate_files,
-  ithenticateExclusionFilters: row.ithenticate_exclusion_filters,
-  ithenticateWantAiReport: row.ithenticate_want_ai_report,
+const serviceJoins = plugins
+  .map((plugin) => plugin.joinClause)
+  .join("\n       ");
 
-  fulltextStatus: row.fulltext_status,
-  fulltextFaculty: row.fulltext_faculty,
-  fulltextFacultyOther: row.fulltext_faculty_other,
-  fulltextTelephone: row.fulltext_telephone,
-  fulltextArticleTitle: row.fulltext_article_title,
-  fulltextDoi: row.fulltext_doi,
-  fulltextMoreInfo: row.fulltext_more_info,
-  fulltextPurchaseConsent: row.fulltext_purchase_consent,
+const toRequest = (row: Record<string, unknown>): ServiceRequest => {
+  const base = row as unknown as BaseRow;
+  const serviceFields = plugins.reduce(
+    (acc, plugin) => ({ ...acc, ...plugin.mapRow(row) }),
+    {} as Partial<ServiceRequest>
+  );
 
-  deliveryStaffStudentId: row.delivery_staff_student_id,
-  deliveryStatus: row.delivery_status,
-  deliveryFaculty: row.delivery_faculty,
-  deliveryFacultyOther: row.delivery_faculty_other,
-  deliveryBookTitle: row.delivery_book_title,
-  deliveryLcCall: row.delivery_lc_call,
-  deliveryCollection: row.delivery_collection
-});
+  return {
+    id: base.id,
+    requestNo: base.request_no,
+    title: base.title,
+    requestType: base.request_type_name,
+    requesterName: base.requester_name,
+    requesterEmail: base.requester_email,
+    detail: base.detail,
+    status: base.status,
+    adminReply: base.admin_reply ?? null,
+    adminReplyAt: base.admin_reply_at ? base.admin_reply_at.toISOString() : null,
+    adminReplyBy: base.admin_reply_by ?? null,
+    createdAt: base.created_at.toISOString(),
+    updatedAt: base.updated_at.toISOString(),
+    deletedAt: base.deleted_at ? base.deleted_at.toISOString() : null,
+    ...serviceFields
+  };
+};
 
-const buildListFilter = (params: ListRequestParams, userContext?: { role: string; email: string }) => {
+const buildListFilter = (
+  params: ListRequestParams,
+  userContext?: { role: string; email: string }
+) => {
   const clauses = ["deleted_at IS NULL"];
   const values: unknown[] = [];
 
@@ -108,7 +86,17 @@ const buildListFilter = (params: ListRequestParams, userContext?: { role: string
     );
   }
 
-  if (userContext && (userContext.role === "student" || userContext.role === "staff" || userContext.role === "user")) {
+  if (params.status) {
+    values.push(params.status);
+    clauses.push(`sr.status = $${values.length}`);
+  }
+
+  if (
+    userContext &&
+    (userContext.role === "student" ||
+      userContext.role === "staff" ||
+      userContext.role === "user")
+  ) {
     values.push(userContext.email);
     clauses.push(`requester_email = $${values.length}`);
   }
@@ -120,44 +108,24 @@ const buildListFilter = (params: ListRequestParams, userContext?: { role: string
 };
 
 export const requestRepository = {
-  async list(params: ListRequestParams, userContext?: { role: string; email: string }) {
+  async list(
+    params: ListRequestParams,
+    userContext?: { role: string; email: string }
+  ) {
     const { whereSql, values } = buildListFilter(params, userContext);
     const offset = (params.page - 1) * params.pageSize;
 
     const countResult = await pool.query<{ total: string }>(
-      `SELECT COUNT(*) AS total FROM service_requests WHERE ${whereSql}`,
+      `SELECT COUNT(*) AS total FROM service_requests sr WHERE ${whereSql}`,
       values
     );
 
-    const result = await pool.query<RequestRow>(
+    const result = await pool.query(
       `SELECT sr.*, rt.name AS request_type_name,
-              ir.status AS ithenticate_status,
-              ir.faculty AS ithenticate_faculty,
-              ir.faculty_other AS ithenticate_faculty_other,
-              ir.telephone AS ithenticate_telephone,
-              ir.files AS ithenticate_files,
-              ir.exclusion_filters AS ithenticate_exclusion_filters,
-              ir.want_ai_report AS ithenticate_want_ai_report,
-              fr.status AS fulltext_status,
-              fr.faculty AS fulltext_faculty,
-              fr.faculty_other AS fulltext_faculty_other,
-              fr.telephone AS fulltext_telephone,
-              fr.article_title AS fulltext_article_title,
-              fr.doi AS fulltext_doi,
-              fr.more_info AS fulltext_more_info,
-              fr.purchase_consent AS fulltext_purchase_consent,
-              bdr.staff_student_id AS delivery_staff_student_id,
-              bdr.status AS delivery_status,
-              bdr.faculty AS delivery_faculty,
-              bdr.faculty_other AS delivery_faculty_other,
-              bdr.book_title AS delivery_book_title,
-              bdr.lc_call AS delivery_lc_call,
-              bdr.collection AS delivery_collection
+              ${serviceSelectColumns}
        FROM service_requests sr
        JOIN request_types rt ON rt.id = sr.request_type_id
-       LEFT JOIN ithenticate_requests ir ON ir.request_id = sr.id
-       LEFT JOIN fulltext_requests fr ON fr.request_id = sr.id
-       LEFT JOIN book_delivery_requests bdr ON bdr.request_id = sr.id
+       ${serviceJoins}
        WHERE ${whereSql}
        ORDER BY sr.created_at DESC, sr.request_no DESC
        LIMIT $${values.length + 1}
@@ -172,35 +140,12 @@ export const requestRepository = {
   },
 
   async findById(id: string) {
-    const result = await pool.query<RequestRow>(
+    const result = await pool.query(
       `SELECT sr.*, rt.name AS request_type_name,
-              ir.status AS ithenticate_status,
-              ir.faculty AS ithenticate_faculty,
-              ir.faculty_other AS ithenticate_faculty_other,
-              ir.telephone AS ithenticate_telephone,
-              ir.files AS ithenticate_files,
-              ir.exclusion_filters AS ithenticate_exclusion_filters,
-              ir.want_ai_report AS ithenticate_want_ai_report,
-              fr.status AS fulltext_status,
-              fr.faculty AS fulltext_faculty,
-              fr.faculty_other AS fulltext_faculty_other,
-              fr.telephone AS fulltext_telephone,
-              fr.article_title AS fulltext_article_title,
-              fr.doi AS fulltext_doi,
-              fr.more_info AS fulltext_more_info,
-              fr.purchase_consent AS fulltext_purchase_consent,
-              bdr.staff_student_id AS delivery_staff_student_id,
-              bdr.status AS delivery_status,
-              bdr.faculty AS delivery_faculty,
-              bdr.faculty_other AS delivery_faculty_other,
-              bdr.book_title AS delivery_book_title,
-              bdr.lc_call AS delivery_lc_call,
-              bdr.collection AS delivery_collection
+              ${serviceSelectColumns}
        FROM service_requests sr
        JOIN request_types rt ON rt.id = sr.request_type_id
-       LEFT JOIN ithenticate_requests ir ON ir.request_id = sr.id
-       LEFT JOIN fulltext_requests fr ON fr.request_id = sr.id
-       LEFT JOIN book_delivery_requests bdr ON bdr.request_id = sr.id
+       ${serviceJoins}
        WHERE sr.id = $1 AND sr.deleted_at IS NULL`,
       [id]
     );
@@ -213,7 +158,7 @@ export const requestRepository = {
     try {
       await client.query("BEGIN");
 
-      const insertRequestRes = await client.query<RequestRow>(
+      const insertRequestRes = await client.query<{ id: string }>(
         `INSERT INTO service_requests
            (title, request_type_id, requester_name, requester_email, detail)
          VALUES (
@@ -221,7 +166,7 @@ export const requestRepository = {
            (SELECT id FROM request_types WHERE name = $2),
            $3, $4, $5
          )
-         RETURNING *`,
+         RETURNING id`,
         [
           payload.title,
           payload.requestType,
@@ -230,62 +175,16 @@ export const requestRepository = {
           payload.detail
         ]
       );
-      const row = insertRequestRes.rows[0];
+      const requestId = insertRequestRes.rows[0].id;
 
-      if (payload.requestType === "บริการตรวจการคัดลอกผลงาน (iThenticate)") {
-        await client.query(
-          `INSERT INTO ithenticate_requests
-             (request_id, status, faculty, faculty_other, telephone, files, exclusion_filters, want_ai_report)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            row.id,
-            payload.ithenticateStatus,
-            payload.ithenticateFaculty || null,
-            payload.ithenticateFacultyOther || null,
-            payload.ithenticateTelephone,
-            payload.ithenticateFiles || [],
-            payload.ithenticateExclusionFilters || [],
-            payload.ithenticateWantAiReport
-          ]
-        );
-      } else if (payload.requestType === "บริการ Find Fulltext 4U") {
-        await client.query(
-          `INSERT INTO fulltext_requests
-             (request_id, status, faculty, faculty_other, telephone, article_title, doi, more_info, purchase_consent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
-            row.id,
-            payload.fulltextStatus,
-            payload.fulltextFaculty,
-            payload.fulltextFacultyOther || null,
-            payload.fulltextTelephone || null,
-            payload.fulltextArticleTitle,
-            payload.fulltextDoi,
-            payload.fulltextMoreInfo || null,
-            payload.fulltextPurchaseConsent
-          ]
-        );
-      } else if (payload.requestType === "บริการนำส่งหนังสือ (Book Delivery)") {
-        await client.query(
-          `INSERT INTO book_delivery_requests
-             (request_id, staff_student_id, status, faculty, faculty_other, book_title, lc_call, collection)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            row.id,
-            payload.deliveryStaffStudentId,
-            payload.deliveryStatus,
-            payload.deliveryFaculty,
-            payload.deliveryFacultyOther || null,
-            payload.deliveryBookTitle,
-            payload.deliveryLcCall,
-            payload.deliveryCollection
-          ]
-        );
+      const plugin = getPlugin(payload.requestType);
+      if (plugin) {
+        await plugin.upsert(client, requestId, payload);
       }
 
       await client.query("COMMIT");
 
-      const fullRequest = await requestRepository.findById(row.id);
+      const fullRequest = await requestRepository.findById(requestId);
       if (!fullRequest) {
         throw new Error("Failed to retrieve created request");
       }
@@ -303,7 +202,7 @@ export const requestRepository = {
     try {
       await client.query("BEGIN");
 
-      const updateRes = await client.query<RequestRow>(
+      const updateRes = await client.query(
         `UPDATE service_requests
          SET
            title           = $2,
@@ -313,7 +212,7 @@ export const requestRepository = {
            detail          = $6,
            updated_at      = now()
          WHERE id = $1 AND deleted_at IS NULL
-         RETURNING *`,
+         RETURNING id`,
         [
           id,
           payload.title,
@@ -328,124 +227,13 @@ export const requestRepository = {
         throw new HttpError(404, "ไม่พบ Request ที่ต้องการแก้ไข");
       }
 
-      if (payload.requestType === "บริการตรวจการคัดลอกผลงาน (iThenticate)") {
-        await client.query(
-          `INSERT INTO ithenticate_requests
-             (request_id, status, faculty, faculty_other, telephone, files, exclusion_filters, want_ai_report)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (request_id) DO UPDATE
-           SET
-             status            = EXCLUDED.status,
-             faculty           = EXCLUDED.faculty,
-             faculty_other     = EXCLUDED.faculty_other,
-             telephone         = EXCLUDED.telephone,
-             files             = EXCLUDED.files,
-             exclusion_filters = EXCLUDED.exclusion_filters,
-             want_ai_report    = EXCLUDED.want_ai_report`,
-          [
-            id,
-            payload.ithenticateStatus,
-            payload.ithenticateFaculty || null,
-            payload.ithenticateFacultyOther || null,
-            payload.ithenticateTelephone,
-            payload.ithenticateFiles || [],
-            payload.ithenticateExclusionFilters || [],
-            payload.ithenticateWantAiReport
-          ]
-        );
-        // Delete from other tables
-        await client.query(
-          `DELETE FROM fulltext_requests WHERE request_id = $1`,
-          [id]
-        );
-        await client.query(
-          `DELETE FROM book_delivery_requests WHERE request_id = $1`,
-          [id]
-        );
-      } else if (payload.requestType === "บริการ Find Fulltext 4U") {
-        await client.query(
-          `INSERT INTO fulltext_requests
-             (request_id, status, faculty, faculty_other, telephone, article_title, doi, more_info, purchase_consent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-           ON CONFLICT (request_id) DO UPDATE
-           SET
-             status           = EXCLUDED.status,
-             faculty          = EXCLUDED.faculty,
-             faculty_other    = EXCLUDED.faculty_other,
-             telephone        = EXCLUDED.telephone,
-             article_title    = EXCLUDED.article_title,
-             doi              = EXCLUDED.doi,
-             more_info        = EXCLUDED.more_info,
-             purchase_consent = EXCLUDED.purchase_consent`,
-          [
-            id,
-            payload.fulltextStatus,
-            payload.fulltextFaculty,
-            payload.fulltextFacultyOther || null,
-            payload.fulltextTelephone || null,
-            payload.fulltextArticleTitle,
-            payload.fulltextDoi,
-            payload.fulltextMoreInfo || null,
-            payload.fulltextPurchaseConsent
-          ]
-        );
-        // Delete from other tables
-        await client.query(
-          `DELETE FROM ithenticate_requests WHERE request_id = $1`,
-          [id]
-        );
-        await client.query(
-          `DELETE FROM book_delivery_requests WHERE request_id = $1`,
-          [id]
-        );
-      } else if (payload.requestType === "บริการนำส่งหนังสือ (Book Delivery)") {
-        await client.query(
-          `INSERT INTO book_delivery_requests
-             (request_id, staff_student_id, status, faculty, faculty_other, book_title, lc_call, collection)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (request_id) DO UPDATE
-           SET
-             staff_student_id = EXCLUDED.staff_student_id,
-             status           = EXCLUDED.status,
-             faculty          = EXCLUDED.faculty,
-             faculty_other    = EXCLUDED.faculty_other,
-             book_title       = EXCLUDED.book_title,
-             lc_call          = EXCLUDED.lc_call,
-             collection       = EXCLUDED.collection`,
-          [
-            id,
-            payload.deliveryStaffStudentId,
-            payload.deliveryStatus,
-            payload.deliveryFaculty,
-            payload.deliveryFacultyOther || null,
-            payload.deliveryBookTitle,
-            payload.deliveryLcCall,
-            payload.deliveryCollection
-          ]
-        );
-        // Delete from other tables
-        await client.query(
-          `DELETE FROM ithenticate_requests WHERE request_id = $1`,
-          [id]
-        );
-        await client.query(
-          `DELETE FROM fulltext_requests WHERE request_id = $1`,
-          [id]
-        );
-      } else {
-        // Delete from all tables if not matching either type
-        await client.query(
-          `DELETE FROM ithenticate_requests WHERE request_id = $1`,
-          [id]
-        );
-        await client.query(
-          `DELETE FROM fulltext_requests WHERE request_id = $1`,
-          [id]
-        );
-        await client.query(
-          `DELETE FROM book_delivery_requests WHERE request_id = $1`,
-          [id]
-        );
+      // Keep the sub-table for the selected type, drop the others.
+      for (const plugin of plugins) {
+        if (plugin.type === payload.requestType) {
+          await plugin.upsert(client, id, payload);
+        } else {
+          await plugin.deleteFor(client, id);
+        }
       }
 
       await client.query("COMMIT");
@@ -463,8 +251,71 @@ export const requestRepository = {
     }
   },
 
+  async updateStatus(id: string, status: RequestStatus, changedBy?: string) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Read the current status first so we can log the transition.
+      const current = await client.query<{ status: RequestStatus }>(
+        `SELECT status FROM service_requests
+         WHERE id = $1 AND deleted_at IS NULL
+         FOR UPDATE`,
+        [id]
+      );
+
+      if (current.rowCount === 0) {
+        throw new HttpError(404, "ไม่พบ Request ที่ต้องการอัปเดตสถานะ");
+      }
+
+      const oldStatus = current.rows[0].status;
+
+      await client.query(
+        `UPDATE service_requests
+         SET status = $2, updated_at = now()
+         WHERE id = $1 AND deleted_at IS NULL`,
+        [id, status]
+      );
+
+      // Record the change only when the status actually changed.
+      if (oldStatus !== status) {
+        await client.query(
+          `INSERT INTO request_status_logs
+             (request_id, old_status, new_status, changed_by)
+           VALUES ($1, $2, $3, $4)`,
+          [id, oldStatus, status, changedBy ?? null]
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    return requestRepository.findById(id);
+  },
+  
+  async reply(id: string, message: string, repliedBy?: string) {
+    const result = await pool.query(
+      `UPDATE service_requests
+       SET admin_reply = $2, admin_reply_at = now(), admin_reply_by = $3, updated_at = now()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id`,
+      [id, message, repliedBy ?? null]
+    );
+
+    if (result.rowCount === 0) {
+      throw new HttpError(404, "ไม่พบ Request ที่ต้องการตอบกลับ");
+    }
+
+    return requestRepository.findById(id);
+  },
+
   async softDelete(id: string) {
-    const result = await pool.query<RequestRow>(
+    const result = await pool.query(
       `WITH deleted_row AS (
          UPDATE service_requests
          SET deleted_at = now()
@@ -484,4 +335,3 @@ export const requestRepository = {
     return toRequest(result.rows[0]);
   }
 };
-

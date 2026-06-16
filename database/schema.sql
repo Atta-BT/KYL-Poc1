@@ -21,10 +21,26 @@ CREATE TABLE IF NOT EXISTS service_requests (
   requester_name  text     NOT NULL CHECK (char_length(trim(requester_name)) > 0),
   requester_email text     NOT NULL CHECK (requester_email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$'),
   detail          text     NOT NULL CHECK (char_length(trim(detail)) > 0),
+  status          text     NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'in_progress', 'resolved', 'rejected')),
+  admin_reply     text,
+  admin_reply_at  timestamptz,
+  admin_reply_by  text,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
   deleted_at      timestamptz
+
 );
+
+-- เพิ่มคอลัมน์ให้ฐานข้อมูลเดิมที่สร้างตารางไปแล้ว (idempotent)
+ALTER TABLE service_requests
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
+ALTER TABLE service_requests
+  ADD COLUMN IF NOT EXISTS admin_reply text;
+ALTER TABLE service_requests
+  ADD COLUMN IF NOT EXISTS admin_reply_at timestamptz;
+ALTER TABLE service_requests
+  ADD COLUMN IF NOT EXISTS admin_reply_by text;
 
 CREATE INDEX IF NOT EXISTS idx_service_requests_created_at
   ON service_requests (created_at DESC)
@@ -32,6 +48,10 @@ CREATE INDEX IF NOT EXISTS idx_service_requests_created_at
 
 CREATE INDEX IF NOT EXISTS idx_service_requests_type_id
   ON service_requests (request_type_id)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_service_requests_status
+  ON service_requests (status)
   WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_service_requests_search
@@ -95,7 +115,50 @@ CREATE TABLE IF NOT EXISTS book_delivery_requests (
   book_title        text NOT NULL,
   lc_call           text NOT NULL,
   collection        text NOT NULL
-);  
+);
+
+-- ตารางเฉพาะสำหรับข้อมูลบริการยืมระหว่างห้องสมุด (Interlibrary Loan)
+CREATE TABLE IF NOT EXISTS interlibrary_loan_requests (
+  request_id        uuid PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
+  staff_student_id  text NOT NULL,
+  status            text NOT NULL,
+  faculty           text NOT NULL,
+  faculty_other     text,
+  telephone         text NOT NULL,
+  resource_title    text NOT NULL,
+  author            text,
+  item_type         text NOT NULL,
+  source_library    text,
+  need_by_date      date
+);
+
+-- ตารางเฉพาะสำหรับข้อมูลบริการนำส่งเผยแพร่ผลงาน หนังสือ ตำรา
+CREATE TABLE IF NOT EXISTS publish_delivery_requests (
+  request_id        uuid PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
+  staff_student_id  text NOT NULL,
+  status            text NOT NULL,
+  faculty           text NOT NULL,
+  faculty_other     text,
+  telephone         text NOT NULL,
+  work_title        text NOT NULL,
+  work_type         text NOT NULL,
+  author            text NOT NULL,
+  work_year         text,
+  description       text
+);
+
+-- ตารางบันทึกประวัติการเปลี่ยนสถานะคำขอ (status เดิม -> ใหม่ + วันเวลา)
+CREATE TABLE IF NOT EXISTS request_status_logs (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id  uuid        NOT NULL REFERENCES service_requests(id) ON DELETE CASCADE,
+  old_status  text,
+  new_status  text        NOT NULL,
+  changed_by  text,
+  changed_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_request_status_logs_request_id
+  ON request_status_logs (request_id, changed_at DESC);
 
 CREATE TABLE IF NOT EXISTS users (
   id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -118,4 +181,5 @@ CREATE TABLE IF NOT EXISTS login_logs (
 
 CREATE INDEX IF NOT EXISTS idx_login_logs_user_id ON login_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_logs_logged_in_at ON login_logs(logged_in_at DESC);
+
 

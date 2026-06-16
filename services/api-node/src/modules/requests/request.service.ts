@@ -3,6 +3,7 @@ import type {
   ListRequestParams,
   PagedResult,
   RequestPayload,
+  RequestStatus,
   ServiceRequest
 } from "./request.types.js";
 
@@ -34,6 +35,14 @@ export const requestService = {
 
   async update(id: string, payload: RequestPayload) {
     return requestRepository.update(id, payload);
+  },
+
+  async updateStatus(id: string, status: RequestStatus, changedBy?: string) {
+    return requestRepository.updateStatus(id, status, changedBy);
+  },
+
+  async reply(id: string, message: string, repliedBy?: string) {
+    return requestRepository.reply(id, message, repliedBy);
   },
 
   async softDelete(id: string) {

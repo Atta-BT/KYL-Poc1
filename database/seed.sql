@@ -3,7 +3,9 @@ INSERT INTO request_types (name)
 VALUES
   ('บริการ Find Fulltext 4U'),
   ('บริการตรวจการคัดลอกผลงาน (iThenticate)'),
-  ('บริการนำส่งหนังสือ (Book Delivery)')
+  ('บริการนำส่งหนังสือ (Book Delivery)'),
+  ('บริการยืมระหว่างห้องสมุด'),
+  ('บริการนำส่งเผยแพร่ผลงาน หนังสือ ตำรา')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO service_requests

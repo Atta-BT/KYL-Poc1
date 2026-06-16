@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { requestTypes } from "./request.types.js";
+import { requestStatuses, requestTypes } from "./request.types.js";
+import { plugins } from "./services/registry.js";
+
+/** Merge each service plugin's field schema into one shape. */
+const serviceFieldsShape = plugins.reduce(
+  (shape, plugin) => ({ ...shape, ...plugin.schema }),
+  {} as z.ZodRawShape
+);
 
 export const requestPayloadSchema = z.object({
   title: z.string().trim().min(1, "กรุณากรอกหัวข้อ Request"),
@@ -12,37 +19,24 @@ export const requestPayloadSchema = z.object({
     .trim()
     .email("กรุณากรอกอีเมลให้ถูกต้อง"),
   detail: z.string().trim().min(1, "กรุณากรอกรายละเอียด Request"),
-  
-  ithenticateStatus: z.string().trim().optional().nullable(),
-  ithenticateFaculty: z.string().trim().optional().nullable(),
-  ithenticateFacultyOther: z.string().trim().optional().nullable(),
-  ithenticateTelephone: z.string().trim().optional().nullable(),
-  ithenticateFiles: z.array(z.string()).optional().nullable(),
-  ithenticateExclusionFilters: z.array(z.string()).optional().nullable(),
-  ithenticateWantAiReport: z.string().trim().optional().nullable(),
 
-  fulltextStatus: z.string().trim().optional().nullable(),
-  fulltextFaculty: z.string().trim().optional().nullable(),
-  fulltextFacultyOther: z.string().trim().optional().nullable(),
-  fulltextTelephone: z.string().trim().optional().nullable(),
-  fulltextArticleTitle: z.string().trim().optional().nullable(),
-  fulltextDoi: z.string().trim().optional().nullable(),
-  fulltextMoreInfo: z.string().trim().optional().nullable(),
-  fulltextPurchaseConsent: z.string().trim().optional().nullable(),
-
-  deliveryStaffStudentId: z.string().trim().optional().nullable(),
-  deliveryStatus: z.string().trim().optional().nullable(),
-  deliveryFaculty: z.string().trim().optional().nullable(),
-  deliveryFacultyOther: z.string().trim().optional().nullable(),
-  deliveryBookTitle: z.string().trim().optional().nullable(),
-  deliveryLcCall: z.string().trim().optional().nullable(),
-  deliveryCollection: z.string().trim().optional().nullable()
+  ...serviceFieldsShape
 });
 
 export const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
   search: z.string().trim().optional().catch(undefined),
-  type: z.enum(requestTypes).optional().catch(undefined)
+  type: z.enum(requestTypes).optional().catch(undefined),
+  status: z.enum(requestStatuses).optional().catch(undefined)
 });
 
+export const updateStatusSchema = z.object({
+  status: z.enum(requestStatuses, {
+    required_error: "กรุณาเลือกสถานะ"
+  })
+});
+
+export const replySchema = z.object({
+  reply: z.string().trim().min(1, "กรุณากรอกข้อความตอบกลับ")
+});

@@ -64,7 +64,29 @@ export const toApiPayload = (
     deliveryFacultyOther: payload.deliveryFacultyOther,
     deliveryBookTitle: payload.deliveryBookTitle,
     deliveryLcCall: payload.deliveryLcCall,
-    deliveryCollection: payload.deliveryCollection
+    deliveryCollection: payload.deliveryCollection,
+
+    illStaffStudentId: payload.illStaffStudentId,
+    illStatus: payload.illStatus,
+    illFaculty: payload.illFaculty,
+    illFacultyOther: payload.illFacultyOther,
+    illTelephone: payload.illTelephone,
+    illResourceTitle: payload.illResourceTitle,
+    illAuthor: payload.illAuthor,
+    illItemType: payload.illItemType,
+    illSourceLibrary: payload.illSourceLibrary,
+    illNeedByDate: payload.illNeedByDate,
+
+    pubStaffStudentId: payload.pubStaffStudentId,
+    pubStatus: payload.pubStatus,
+    pubFaculty: payload.pubFaculty,
+    pubFacultyOther: payload.pubFacultyOther,
+    pubTelephone: payload.pubTelephone,
+    pubWorkTitle: payload.pubWorkTitle,
+    pubWorkType: payload.pubWorkType,
+    pubAuthor: payload.pubAuthor,
+    pubYear: payload.pubYear,
+    pubDescription: payload.pubDescription
   };
 };
 

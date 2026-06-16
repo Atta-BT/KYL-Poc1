@@ -1,12 +1,30 @@
+import type { BookDeliveryFields } from "./services/book-delivery.js";
+import type { FulltextFields } from "./services/fulltext.js";
+import type { IthenticateFields } from "./services/ithenticate.js";
+import type { InterlibraryLoanFields } from "./services/interlibrary-loan.js";
+import type { PublishDeliveryFields } from "./services/publish-delivery.js";
+
 export const requestTypes = [
   "บริการ Find Fulltext 4U",
   "บริการตรวจการคัดลอกผลงาน (iThenticate)",
-  "บริการนำส่งหนังสือ (Book Delivery)"
+  "บริการนำส่งหนังสือ (Book Delivery)",
+  "บริการยืมระหว่างห้องสมุด",
+  "บริการนำส่งเผยแพร่ผลงาน หนังสือ ตำรา"
 ] as const;
 
 export type RequestType = (typeof requestTypes)[number];
 
-export type ServiceRequest = {
+export const requestStatuses = [
+  "pending",
+  "in_progress",
+  "resolved",
+  "rejected"
+] as const;
+
+export type RequestStatus = (typeof requestStatuses)[number];
+
+/** Fields owned by the base service_requests row. */
+type BaseRequest = {
   id: string;
   requestNo: string;
   title: string;
@@ -14,80 +32,41 @@ export type ServiceRequest = {
   requesterName: string;
   requesterEmail: string;
   detail: string;
+  status: RequestStatus;
+  adminReply: string | null;
+  adminReplyAt: string | null;
+  adminReplyBy: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
-
-  // iThenticate specific fields
-  ithenticateStatus?: string | null;
-  ithenticateFaculty?: string | null;
-  ithenticateFacultyOther?: string | null;
-  ithenticateTelephone?: string | null;
-  ithenticateFiles?: string[] | null;
-  ithenticateExclusionFilters?: string[] | null;
-  ithenticateWantAiReport?: string | null;
-
-  // Find Full-text 4U specific fields
-  fulltextStatus?: string | null;
-  fulltextFaculty?: string | null;
-  fulltextFacultyOther?: string | null;
-  fulltextTelephone?: string | null;
-  fulltextArticleTitle?: string | null;
-  fulltextDoi?: string | null;
-  fulltextMoreInfo?: string | null;
-  fulltextPurchaseConsent?: string | null;
-
-  // Book Delivery specific fields
-  deliveryStaffStudentId?: string | null;
-  deliveryStatus?: string | null;
-  deliveryFaculty?: string | null;
-  deliveryFacultyOther?: string | null;
-  deliveryBookTitle?: string | null;
-  deliveryLcCall?: string | null;
-  deliveryCollection?: string | null;
 };
 
-export type RequestPayload = {
+/** Base fields supplied when creating/updating a request. */
+type BasePayload = {
   title: string;
   requestType: RequestType;
   requesterName: string;
   requesterEmail: string;
   detail: string;
-
-  // iThenticate specific fields
-  ithenticateStatus?: string | null;
-  ithenticateFaculty?: string | null;
-  ithenticateFacultyOther?: string | null;
-  ithenticateTelephone?: string | null;
-  ithenticateFiles?: string[] | null;
-  ithenticateExclusionFilters?: string[] | null;
-  ithenticateWantAiReport?: string | null;
-
-  // Find Full-text 4U specific fields
-  fulltextStatus?: string | null;
-  fulltextFaculty?: string | null;
-  fulltextFacultyOther?: string | null;
-  fulltextTelephone?: string | null;
-  fulltextArticleTitle?: string | null;
-  fulltextDoi?: string | null;
-  fulltextMoreInfo?: string | null;
-  fulltextPurchaseConsent?: string | null;
-
-  // Book Delivery specific fields
-  deliveryStaffStudentId?: string | null;
-  deliveryStatus?: string | null;
-  deliveryFaculty?: string | null;
-  deliveryFacultyOther?: string | null;
-  deliveryBookTitle?: string | null;
-  deliveryLcCall?: string | null;
-  deliveryCollection?: string | null;
 };
+
+/** Per-service field groups are owned by their plugin files. */
+type ServiceFields = IthenticateFields &
+  FulltextFields &
+  BookDeliveryFields &
+  InterlibraryLoanFields &
+  PublishDeliveryFields;
+
+export type ServiceRequest = BaseRequest & ServiceFields;
+
+export type RequestPayload = BasePayload & ServiceFields;
 
 export type ListRequestParams = {
   page: number;
   pageSize: number;
   search?: string;
   type?: RequestType;
+  status?: RequestStatus;
 };
 
 export type PagedResult<T> = {
@@ -99,4 +78,3 @@ export type PagedResult<T> = {
     totalPages: number;
   };
 };
-
